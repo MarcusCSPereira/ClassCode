@@ -3279,3 +3279,475 @@ main {
     opacity: 0.8;
   }
 }
+
+/* Theme tokens are shared by the application and CodeMirror. */
+:root {
+  color-scheme: light;
+  --text: #263047;
+  --surface: #ffffff;
+  --surface-muted: #eef0f8;
+  --accent-text: #5146bc;
+  --editor-bg: #ffffff;
+  --editor-text: #303c56;
+  --editor-caret: #4f46e5;
+  --editor-gutter: #929cb1;
+  --editor-active: #f2f3fc;
+  --editor-selection: #dfe1ff;
+  --syntax-keyword: #7c3acb;
+  --syntax-string: #a24f26;
+  --syntax-number: #2562b9;
+  --syntax-comment: #7c879f;
+  --syntax-function: #3056a3;
+  --syntax-type: #aa3d68;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  color: #e2e7f4;
+  background: #101321;
+  --text: #e2e7f4;
+  --surface: #181d2f;
+  --surface-muted: #242b43;
+  --accent: #8276ff;
+  --accent-text: #b5adff;
+  --accent-soft: #313052;
+  --deep: #e2e7f4;
+  --muted: #a4afc7;
+  --border: #2c344e;
+  --canvas: #101321;
+  --white: #181d2f;
+  --blue-soft: #2c2b4d;
+  --peach: #3b2e35;
+  --lavender: #322c4a;
+  --editor-bg: #121728;
+  --editor-text: #d8dff0;
+  --editor-caret: #b6aeff;
+  --editor-gutter: #68758f;
+  --editor-active: #1d243a;
+  --editor-selection: #3d3b67;
+  --syntax-keyword: #c4a0ff;
+  --syntax-string: #f2bf8c;
+  --syntax-number: #8abfff;
+  --syntax-comment: #8997b3;
+  --syntax-function: #a8c8ff;
+  --syntax-type: #f0a4cb;
+}
+
+/* Dark surfaces and text for all existing screens, including dialogs. */
+:root[data-theme='dark'] .blue-text,
+:root[data-theme='dark'] .brand small,
+:root[data-theme='dark'] .nav-label,
+:root[data-theme='dark'] .nav-link,
+:root[data-theme='dark'] .sidebar-note > svg,
+:root[data-theme='dark'] .sidebar-note p,
+:root[data-theme='dark'] .help-link,
+:root[data-theme='dark'] .profile small,
+:root[data-theme='dark'] .avatar,
+:root[data-theme='dark'] .topbar-avatar,
+:root[data-theme='dark'] .profile > svg,
+:root[data-theme='dark'] .breadcrumb,
+:root[data-theme='dark'] .demo-pill,
+:root[data-theme='dark'] .eyebrow,
+:root[data-theme='dark'] .page-title p,
+:root[data-theme='dark'] .button.secondary,
+:root[data-theme='dark'] .text-button,
+:root[data-theme='dark'] .hero-kicker,
+:root[data-theme='dark'] .hero em,
+:root[data-theme='dark'] .hero p,
+:root[data-theme='dark'] .hero-languages,
+:root[data-theme='dark'] .tile-back,
+:root[data-theme='dark'] .tile-front span,
+:root[data-theme='dark'] .floating-tag,
+:root[data-theme='dark'] .art-star,
+:root[data-theme='dark'] .blue,
+:root[data-theme='dark'] .tone-0,
+:root[data-theme='dark'] .peach,
+:root[data-theme='dark'] .tone-1,
+:root[data-theme='dark'] .lavender,
+:root[data-theme='dark'] .tone-2,
+:root[data-theme='dark'] .tone-3,
+:root[data-theme='dark'] .stat-grid strong small,
+:root[data-theme='dark'] .stat-grid p,
+:root[data-theme='dark'] .section-heading p,
+:root[data-theme='dark'] .subtle-badge,
+:root[data-theme='dark'] .topic-number,
+:root[data-theme='dark'] .topic-card p,
+:root[data-theme='dark'] .topic-card-bottom,
+:root[data-theme='dark'] .problem-status,
+:root[data-theme='dark'] .problem-info small,
+:root[data-theme='dark'] .problem-time,
+:root[data-theme='dark'] .problem-row > svg,
+:root[data-theme='dark'] .badge.blue,
+:root[data-theme='dark'] .badge.amber,
+:root[data-theme='dark'] .badge.neutral,
+:root[data-theme='dark'] .card-heading > svg,
+:root[data-theme='dark'] .progress-ring small,
+:root[data-theme='dark'] .progress-card > p,
+:root[data-theme='dark'] .progress-card > p strong,
+:root[data-theme='dark'] .small-icon,
+:root[data-theme='dark'] .weekly-goal small,
+:root[data-theme='dark'] .visual-preview > p,
+:root[data-theme='dark'] .mini-array > span,
+:root[data-theme='dark'] .mini-array > .highlight,
+:root[data-theme='dark'] .mini-array > .highlight:after,
+:root[data-theme='dark'] .mini-array-label,
+:root[data-theme='dark'] .class-preview-icon,
+:root[data-theme='dark'] .class-preview p,
+:root[data-theme='dark'] .aside-footnote,
+:root[data-theme='dark'] .page-footer,
+:root[data-theme='dark'] .page-footer > span:first-child,
+:root[data-theme='dark'] .page-footer > span:first-child > span,
+:root[data-theme='dark'] .roadmap-banner p,
+:root[data-theme='dark'] .segmented button,
+:root[data-theme='dark'] .search-field,
+:root[data-theme='dark'] .search-field input::placeholder,
+:root[data-theme='dark'] .list-header,
+:root[data-theme='dark'] .info-strip,
+:root[data-theme='dark'] .empty,
+:root[data-theme='dark'] .lab-notes > p,
+:root[data-theme='dark'] .lab-notes li,
+:root[data-theme='dark'] .visual-toolbar > label,
+:root[data-theme='dark'] .visual-heading,
+:root[data-theme='dark'] .target-field,
+:root[data-theme='dark'] .array-cell,
+:root[data-theme='dark'] .array-item > span,
+:root[data-theme='dark'] .array-item small,
+:root[data-theme='dark'] .frame-message,
+:root[data-theme='dark'] .pseudocode > div,
+:root[data-theme='dark'] .pseudocode > div > span,
+:root[data-theme='dark'] .classroom-card > p,
+:root[data-theme='dark'] .classroom-card > p > span,
+:root[data-theme='dark'] .class-code > span,
+:root[data-theme='dark'] .class-code strong,
+:root[data-theme='dark'] .class-code .icon-button,
+:root[data-theme='dark'] .class-challenges button,
+:root[data-theme='dark'] .teacher-stats svg,
+:root[data-theme='dark'] .teacher-stats span,
+:root[data-theme='dark'] .teacher-actions > p,
+:root[data-theme='dark'] .teacher-actions small,
+:root[data-theme='dark'] .teacher-actions > button > svg,
+:root[data-theme='dark'] .teacher-info p,
+:root[data-theme='dark'] .problem-title p,
+:root[data-theme='dark'] .problem-title-meta > span:last-child,
+:root[data-theme='dark'] .tabs button,
+:root[data-theme='dark'] .source-label,
+:root[data-theme='dark'] .statement-content > p,
+:root[data-theme='dark'] .example-grid h3,
+:root[data-theme='dark'] .example-grid pre,
+:root[data-theme='dark'] .code-toolbar,
+:root[data-theme='dark'] .code-toolbar select,
+:root[data-theme='dark'] .line-numbers,
+:root[data-theme='dark'] .editor-footer,
+:root[data-theme='dark'] .submission-info,
+:root[data-theme='dark'] .hint-number,
+:root[data-theme='dark'] .hint-card .mono,
+:root[data-theme='dark'] .hint-card > p,
+:root[data-theme='dark'] .form-stack label,
+:root[data-theme='dark'] .form-stack input::placeholder,
+:root[data-theme='dark'] .form-stack textarea::placeholder,
+:root[data-theme='dark'] .form-stack .error,
+:root[data-theme='dark'] .help-content > p,
+:root[data-theme='dark'] .topic-modal-intro p,
+:root[data-theme='dark'] .danger,
+:root[data-theme='dark'] .storage-warning,
+:root[data-theme='dark'] .topbar .demo-pill {
+  color: var(--muted);
+}
+:root[data-theme='dark'] .sidebar,
+:root[data-theme='dark'] .topbar,
+:root[data-theme='dark'] .button.secondary,
+:root[data-theme='dark'] .floating-tag,
+:root[data-theme='dark'] .stat-grid,
+:root[data-theme='dark'] .topic-card,
+:root[data-theme='dark'] .problem-list,
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .progress-ring > div,
+:root[data-theme='dark'] .segmented button.selected,
+:root[data-theme='dark'] .target-field input,
+:root[data-theme='dark'] .modal {
+  background: var(--surface);
+}
+:root[data-theme='dark'] .brand-mark,
+:root[data-theme='dark'] .text-button:hover,
+:root[data-theme='dark'] .tile-front,
+:root[data-theme='dark'] .problem-status.done,
+:root[data-theme='dark'] .visual-heading > span:first-child,
+:root[data-theme='dark'] .target-field input,
+:root[data-theme='dark'] .array-item.active .array-cell,
+:root[data-theme='dark'] .pseudocode .highlight,
+:root[data-theme='dark'] .tabs .selected,
+:root[data-theme='dark'] .editor-footer {
+  color: var(--accent-text);
+}
+:root[data-theme='dark'] .brand-mark,
+:root[data-theme='dark'] .workspace-icon,
+:root[data-theme='dark'] .nav-link:hover,
+:root[data-theme='dark'] .nav-link.active,
+:root[data-theme='dark'] .nav-link small,
+:root[data-theme='dark'] .avatar,
+:root[data-theme='dark'] .topbar-avatar,
+:root[data-theme='dark'] .button.secondary:hover:not(:disabled),
+:root[data-theme='dark'] .icon-button:hover:not(:disabled),
+:root[data-theme='dark'] .hero,
+:root[data-theme='dark'] .tile-back,
+:root[data-theme='dark'] .tone-3,
+:root[data-theme='dark'] .subtle-badge,
+:root[data-theme='dark'] .featured-topic,
+:root[data-theme='dark'] .progress-track,
+:root[data-theme='dark'] .problem-row:hover,
+:root[data-theme='dark'] .problem-status.done,
+:root[data-theme='dark'] .badge.blue,
+:root[data-theme='dark'] .badge.amber,
+:root[data-theme='dark'] .badge.neutral,
+:root[data-theme='dark'] .small-icon,
+:root[data-theme='dark'] .mini-array > span,
+:root[data-theme='dark'] .mini-array > .highlight,
+:root[data-theme='dark'] .class-preview-icon,
+:root[data-theme='dark'] .roadmap-banner,
+:root[data-theme='dark'] .segmented,
+:root[data-theme='dark'] .info-strip,
+:root[data-theme='dark'] .visual-toolbar select,
+:root[data-theme='dark'] .array-cell,
+:root[data-theme='dark'] .array-item.active .array-cell,
+:root[data-theme='dark'] .pseudocode,
+:root[data-theme='dark'] .pseudocode .highlight,
+:root[data-theme='dark'] .class-code,
+:root[data-theme='dark'] .teacher-info,
+:root[data-theme='dark'] .example-grid pre,
+:root[data-theme='dark'] .hint-number,
+:root[data-theme='dark'] .storage-warning {
+  background: var(--surface-muted);
+}
+:root[data-theme='dark'] .nav-link.active,
+:root[data-theme='dark'] .breadcrumb strong,
+:root[data-theme='dark'] .segmented button.selected,
+:root[data-theme='dark'] .search-field input,
+:root[data-theme='dark'] .empty h3,
+:root[data-theme='dark'] .form-stack input,
+:root[data-theme='dark'] .form-stack textarea,
+:root[data-theme='dark'] .form-stack select {
+  color: var(--text);
+}
+:root[data-theme='dark'] .sidebar-note,
+:root[data-theme='dark'] .button.secondary,
+:root[data-theme='dark'] .hero,
+:root[data-theme='dark'] .art-orbit,
+:root[data-theme='dark'] .tile-back,
+:root[data-theme='dark'] .floating-tag,
+:root[data-theme='dark'] .topic-card:hover,
+:root[data-theme='dark'] .featured-topic,
+:root[data-theme='dark'] .problem-status,
+:root[data-theme='dark'] .mini-array > span,
+:root[data-theme='dark'] .mini-array > .highlight,
+:root[data-theme='dark'] .roadmap-banner,
+:root[data-theme='dark'] .segmented,
+:root[data-theme='dark'] .info-strip,
+:root[data-theme='dark'] .array-cell,
+:root[data-theme='dark'] .array-item.active .array-cell,
+:root[data-theme='dark'] .array-item.found .array-cell,
+:root[data-theme='dark'] .pseudocode,
+:root[data-theme='dark'] .class-code,
+:root[data-theme='dark'] .tabs .selected,
+:root[data-theme='dark'] .code-toolbar select,
+:root[data-theme='dark'] .modal,
+:root[data-theme='dark'] .form-stack input,
+:root[data-theme='dark'] .form-stack textarea,
+:root[data-theme='dark'] .form-stack select,
+:root[data-theme='dark'] .toast,
+:root[data-theme='dark'] .storage-warning {
+  border-color: var(--border);
+}
+:root[data-theme='dark'] .problem-row + .problem-row,
+:root[data-theme='dark'] .class-challenges button,
+:root[data-theme='dark'] .teacher-actions > button {
+  border-top-color: var(--border);
+}
+:root[data-theme='dark'] .code-toolbar {
+  border-bottom-color: var(--border);
+}
+
+/* CodeMirror and theme controls. */
+.theme-toggle {
+  color: var(--accent-text);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  width: 34px;
+  height: 34px;
+}
+:root[data-theme] .code-toolbar,
+:root[data-theme] .editor-footer {
+  background: var(--surface-muted);
+  color: var(--text);
+  border-color: var(--border);
+}
+:root[data-theme] .code-toolbar select {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+:root[data-theme] .code-editor {
+  background: var(--editor-bg);
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.9;
+}
+.code-editor .cm-scroller {
+  max-height: 480px;
+  min-height: 310px;
+}
+.code-editor .cm-editor.cm-focused {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.code-editor .cm-tooltip-autocomplete ul li[aria-selected] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.code-editor .cm-textfield {
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+.code-editor .tok-keyword {
+  color: var(--syntax-keyword);
+  font-weight: 600;
+}
+.code-editor .tok-string,
+.code-editor .tok-string2 {
+  color: var(--syntax-string);
+}
+.code-editor .tok-number,
+.code-editor .tok-bool,
+.code-editor .tok-atom {
+  color: var(--syntax-number);
+}
+.code-editor .tok-comment {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+.code-editor .tok-variableName.tok-definition,
+.code-editor .tok-propertyName,
+.code-editor .tok-labelName {
+  color: var(--syntax-function);
+}
+.code-editor .tok-typeName,
+.code-editor .tok-className {
+  color: var(--syntax-type);
+}
+.code-editor .tok-meta,
+.code-editor .tok-operator {
+  color: var(--syntax-keyword);
+}
+.code-editor .tok-invalid {
+  color: #e06b85;
+  text-decoration: underline wavy;
+}
+:root[data-theme='dark'] .hero {
+  background: linear-gradient(125deg, #23213e, #1c223c);
+  border-color: #383653;
+}
+:root[data-theme='dark'] .hero h2 {
+  color: #eef0ff;
+}
+:root[data-theme='dark'] .hero em {
+  color: #b3aaff;
+}
+:root[data-theme='dark'] .sidebar-note {
+  background: linear-gradient(135deg, #24243d, #1b2135);
+}
+:root[data-theme='dark'] .tile-front {
+  background: linear-gradient(135deg, #454261, #2a2b46);
+  border-color: #69627f;
+  color: #c4baff;
+}
+:root[data-theme='dark'] .tile-back {
+  background: #393256;
+  border-color: #5b4e77;
+  color: #a69bc8;
+}
+:root[data-theme='dark'] .floating-tag {
+  background: #282b44;
+  border-color: #45445f;
+}
+:root[data-theme='dark'] .art-orbit {
+  border-color: #605780;
+}
+:root[data-theme='dark'] .art-dots {
+  opacity: 0.13;
+}
+:root[data-theme='dark'] .topic-card:hover,
+:root[data-theme='dark'] .featured-topic {
+  border-color: #59527f;
+  background: #25263f;
+}
+:root[data-theme='dark'] .nav-link.active,
+:root[data-theme='dark'] .segmented .selected {
+  background: #303052;
+  color: #cec7ff;
+}
+:root[data-theme='dark'] .tabs .selected {
+  color: #b7afff;
+  border-color: #9c8cff;
+}
+:root[data-theme='dark'] .pseudocode .highlight {
+  background: #353052;
+  color: #e0d7ff;
+}
+:root[data-theme='dark'] .array-item.active .array-cell,
+:root[data-theme='dark'] .mini-array > .highlight {
+  background: #423b65;
+  border-color: #7d6dba;
+  color: #e6ddff;
+}
+:root[data-theme='dark'] .array-item.found .array-cell {
+  background: #6353bb;
+  color: #fff;
+  border-color: #a291f2;
+}
+:root[data-theme='dark'] .modal {
+  box-shadow: 0 24px 100px #0008;
+}
+:root[data-theme='dark'] .modal::backdrop {
+  background: #060811bb;
+}
+:root[data-theme='dark'] .form-stack input::placeholder,
+:root[data-theme='dark'] .form-stack textarea::placeholder,
+:root[data-theme='dark'] .search-field input::placeholder {
+  color: #8290ab;
+}
+:root[data-theme='dark'] .form-stack .error,
+:root[data-theme='dark'] .danger {
+  color: #efa7b3;
+}
+:root[data-theme='dark'] :is(button, a, input, select, textarea):focus-visible {
+  outline-color: #afa2ff;
+}
+:root[data-theme='dark'] .play-button {
+  background: #6756cf;
+  color: #fff;
+}
+@media (max-width: 760px) {
+  .topbar-right {
+    gap: 10px;
+  }
+  .code-editor {
+    font-size: 12px;
+  }
+}
+@media (max-width: 430px) {
+  .topbar-right .demo-pill {
+    display: none;
+  }
+}
+.editor-loading {
+  min-height: 310px;
+  display: grid;
+  place-items: center;
+  background: var(--editor-bg);
+  color: var(--muted);
+  font-size: 12px;
+}
+.editor-language-error {
+  padding: 12px 18px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface-muted);
+}

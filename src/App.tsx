@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense, type ComponentType } from 'react';
 import {
   ArrowDownToLine,
   ArrowLeft,
@@ -23,6 +23,8 @@ import {
   LockKeyhole,
   Map,
   Menu,
+  Moon,
+  Sun,
   Network,
   Plus,
   Search,
@@ -48,6 +50,8 @@ import type { DemoState, Language, Module, Problem } from './lib/types';
 import Modal from './components/Modal';
 import Visualizer from './components/Visualizer';
 import ProblemEditor from './components/ProblemEditor';
+const CodeEditor = lazy(() => import('./components/CodeEditor'));
+import { useTheme } from './lib/useTheme';
 
 type Page = 'overview' | 'roadmap' | 'problems' | 'visuals' | 'classes' | 'teacher' | 'problem';
 const pageNames: Record<Page, string> = {
@@ -124,6 +128,7 @@ const fmt = (seconds: number) =>
     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
   const [state, setState] = useState(readState);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -375,6 +380,15 @@ export default function App() {
             <strong>{pageNames[page]}</strong>
           </div>
           <div className="topbar-right">
+            <button
+              className="icon-button theme-toggle"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              aria-pressed={theme === 'dark'}
+            >
+              {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
+            </button>
             <span className="demo-pill">
               <span /> Demonstração local
             </span>
@@ -537,7 +551,9 @@ export default function App() {
                     </div>
                     <div
                       className="progress-ring"
-                      style={{ background: `conic-gradient(var(--accent) ${percent}%, #ebedf5 0)` }}
+                      style={{
+                        background: `conic-gradient(var(--accent) ${percent}%, var(--surface-muted) 0)`,
+                      }}
                     >
                       <div>
                         <strong>
@@ -1099,22 +1115,23 @@ export default function App() {
                       <option value="cpp">C++17</option>
                     </select>
                   </div>
-                  <div className="editor">
-                    <div className="line-numbers" aria-hidden="true">
-                      {(state.drafts[draftKey] ?? starters[language]).split('\n').map((_, i) => (
-                        <span key={i}>{i + 1}</span>
-                      ))}
-                    </div>
-                    <textarea
-                      aria-label="Editor de código"
-                      spellCheck={false}
+                  <Suspense
+                    fallback={
+                      <div className="editor-loading" role="status">
+                        Carregando editor…
+                      </div>
+                    }
+                  >
+                    <CodeEditor
+                      key={draftKey}
                       value={state.drafts[draftKey] ?? starters[language]}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setState((s) => ({ ...s, drafts: { ...s.drafts, [draftKey]: value } }));
-                      }}
+                      language={language}
+                      theme={theme}
+                      onChange={(value) =>
+                        setState((s) => ({ ...s, drafts: { ...s.drafts, [draftKey]: value } }))
+                      }
                     />
-                  </div>
+                  </Suspense>
                   <div className="editor-footer">
                     <span>
                       <span className="tiny-dot" /> Rascunho{' '}

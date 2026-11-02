@@ -17,7 +17,8 @@ Base React + TypeScript + Vite, com design responsivo e fluxos navegáveis. **É
 | Criar turma e entrar com código | Funciona no mesmo navegador; experimente `CLASS26` |
 | Professor criar questão no padrão pedagógico | Formulário validado e publicação local |
 | Dicas em 3, 7 e 12 minutos | Cronômetro local persistido; não é um controle de acesso real |
-| Python 3, Java e C++17 | Rascunhos independentes, salvos por questão e linguagem |
+| Python 3, Java e C++17 | Editor CodeMirror com realce de sintaxe, indentação, linhas e rascunhos por linguagem |
+| Modo claro/escuro | Botão no topo e preferência salva; primeira abertura em modo escuro |
 | Visualizações | Busca binária e bubble sort com passos, reprodução e pseudocódigo |
 | Avaliação de código | Links para CSES; conclusão autodeclarada com reflexão |
 | Login e autorização reais | Ainda não conectados; alternância de perfil é demonstrativa |

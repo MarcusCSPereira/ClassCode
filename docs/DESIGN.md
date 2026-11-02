@@ -61,3 +61,14 @@ As fontes são carregadas do Google Fonts; os fallbacks mantêm a aplicação ut
 - Armazenamento indisponível: aviso de que os dados duram somente na sessão.
 - Conclusão: explicitamente autodeclarada; sem mensagem de Accepted.
 - Interface institucional futura: adicionar carregamento, indisponibilidade, erro de autorização e sessão expirada ao conectar o backend.
+
+
+## Modo escuro e editor
+
+A primeira abertura usa modo escuro. O botão de sol/lua no topo alterna para modo claro; a escolha fica em `classcode.theme.v1`, separada dos dados da demonstração e aplicada antes da renderização. A troca funciona também sem armazenamento, mas nesse caso não persiste ao recarregar.
+
+O modo escuro usa fundo `#101321`, superfícies `#181d2f`, texto `#e2e7f4` e acentos em índigo. As telas, formulários, modais e visualizações acompanham a preferência.
+
+O editor usa [CodeMirror 6](https://codemirror.net/examples/basic/) com gramáticas de Python, Java e C++, carregadas quando necessárias. Palavras-chave, strings, números, comentários e tipos têm realce nos dois temas. Há numeração de linhas, fechamento de pares, indentação, histórico de edição e busca. Tab indenta; Escape seguido de Tab permite sair do editor pelo teclado. A troca de tema mantém o cursor e o documento. A troca de linguagem preserva seu rascunho independente.
+
+![Editor com modo escuro e realce de sintaxe](images/editor-escuro.jpg)

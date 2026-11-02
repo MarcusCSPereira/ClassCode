@@ -31,3 +31,8 @@ Resultados das execuções estão no [GitHub Actions](https://github.com/MarcusC
 - Dados locais não sincronizam dispositivos e não separam pessoas que compartilham o navegador.
 - Somente as primeiras cinco etapas têm questões; os tópicos avançados estão mapeados, com conteúdo em preparação.
 - Acessibilidade foi considerada no design e na implementação, mas não há declaração de conformidade ou auditoria assistiva completa.
+
+
+## Tema e realce de sintaxe
+
+A suíte E2E foi ampliada para cinco cenários em cada viewport (10 execuções): além dos fluxos existentes, verifica alternância e persistência de tema, tokens de palavras-chave/strings/números em Python/Java/C++, preservação dos rascunhos e largura móvel. O editor passou a usar um campo editável CodeMirror; os testes verificam o conteúdo renderizado, em vez de depender de uma implementação com textarea.

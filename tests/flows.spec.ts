@@ -10,11 +10,11 @@ test('aluno salva rascunhos por linguagem e declara conclusão com reflexão', a
   const code = page.getByLabel('Editor de código');
   await code.fill('print(sum(map(int, input().split())))');
   await page.getByLabel('Linguagem', { exact: true }).selectOption('java');
-  await expect(code).toHaveValue(/public class Main/);
+  await expect(code).toContainText(/public class Main/);
   await page.getByLabel('Linguagem', { exact: true }).selectOption('python');
-  await expect(code).toHaveValue('print(sum(map(int, input().split())))');
+  await expect(code).toContainText('print(sum(map(int, input().split())))');
   await page.reload();
-  await expect(code).toHaveValue('print(sum(map(int, input().split())))');
+  await expect(code).toContainText('print(sum(map(int, input().split())))');
   await page.getByRole('button', { name: 'Dicas progressivas' }).click();
   await expect(page.getByRole('button', { name: 'Libera após 3 min' })).toBeDisabled();
   await page.getByRole('button', { name: 'Registrar conclusão', exact: true }).click();
@@ -103,4 +103,35 @@ test('dica libera por tempo decorrido e permanece ao recarregar', async ({ page 
   await expect(
     page.getByText('Quais informações entram e qual resultado deve sair?', { exact: true }),
   ).toBeVisible();
+});
+
+test('tema persiste e as três linguagens destacam tokens sem perder rascunhos', async ({
+  page,
+}) => {
+  await page.goto('/#problem/sum');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  const snippets = {
+    python: 'def soma(a, b):\n    texto = "Olá"\n    return 42',
+    java: 'public class Main {\n  public static void main(String[] args) {\n    String texto = "Olá";\n    int n = 42;\n  }\n}',
+    cpp: '#include <iostream>\nint main() {\n  std::cout << "Olá";\n  return 42;\n}',
+  };
+  for (const [language, snippet] of Object.entries(snippets)) {
+    await page.getByLabel('Linguagem', { exact: true }).selectOption(language);
+    await page.getByLabel('Editor de código').fill(snippet);
+    await expect(page.locator('.code-editor .tok-keyword').first()).toBeVisible();
+    await expect(page.locator('.code-editor .tok-string').first()).toBeVisible();
+    await expect(page.locator('.code-editor .tok-number').first()).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Ativar modo claro', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.getByLabel('Editor de código')).toContainText('return 42;');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByLabel('Linguagem', { exact: true }).selectOption('cpp');
+  await expect(page.getByLabel('Editor de código')).toContainText('return 42;');
+  await page.getByRole('button', { name: 'Ativar modo escuro', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
 });

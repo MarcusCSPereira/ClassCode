@@ -1,0 +1,22 @@
+name: Entrega do MVP
+description: Implementar uma entrega do plano ClassCode
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Resultado esperado
+      description: Quem faz o quê e qual comportamento deve observar?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceite
+      description: Inclua caminho feliz, acesso indevido e estado de erro.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Como validar
+      description: Testes, roteiro e dependências.

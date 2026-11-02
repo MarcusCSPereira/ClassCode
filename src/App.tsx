@@ -270,7 +270,7 @@ export default function App() {
                   {modules.find((m) => m.id === p.moduleId)?.title} <span>· {p.source}</span>
                 </small>
               </span>
-              <span className={`badge ${p.difficulty === 'Básico' ? 'green' : 'amber'}`}>
+              <span className={`badge ${p.difficulty === 'Básico' ? 'blue' : 'amber'}`}>
                 {p.difficulty}
               </span>
               <span className="problem-time">
@@ -400,7 +400,7 @@ export default function App() {
                 <div>
                   <div className="eyebrow">SEU PRÓXIMO PASSO COMEÇA AQUI</div>
                   <h1>
-                    Olá, {state.name}. Vamos evoluir<span className="green-text">?</span>
+                    Olá, {state.name}. Vamos evoluir<span className="blue-text">?</span>
                   </h1>
                   <p>Do primeiro “olá, mundo” às ideias que resolvem grandes problemas.</p>
                 </div>
@@ -459,7 +459,7 @@ export default function App() {
                   </section>
                   <div className="stat-grid">
                     <div>
-                      <span className="stat-icon mint">
+                      <span className="stat-icon blue">
                         <Map size={20} />
                       </span>
                       <span>
@@ -537,7 +537,7 @@ export default function App() {
                     </div>
                     <div
                       className="progress-ring"
-                      style={{ background: `conic-gradient(var(--green) ${percent}%, #edf0e9 0)` }}
+                      style={{ background: `conic-gradient(var(--accent) ${percent}%, #ebedf5 0)` }}
                     >
                       <div>
                         <strong>
@@ -627,7 +627,7 @@ export default function App() {
                 </div>
               </div>
               <div className="roadmap-banner">
-                <span className="topic-icon mint">
+                <span className="topic-icon blue">
                   <Map size={25} />
                 </span>
                 <div>
@@ -637,7 +637,7 @@ export default function App() {
                     As demais compõem o plano de conteúdo.
                   </p>
                 </div>
-                <span className="badge green">{all.length} desafios</span>
+                <span className="badge blue">{all.length} desafios</span>
               </div>
               <div className="filter-row">
                 <div className="segmented">
@@ -721,7 +721,7 @@ export default function App() {
                     resposta.
                   </p>
                 </div>
-                <span className="badge green">2 experiências interativas</span>
+                <span className="badge blue">2 experiências interativas</span>
               </div>
               <div className="lab-layout">
                 <section className="card">
@@ -779,7 +779,7 @@ export default function App() {
                 {myClasses.map((c) => (
                   <section className="card classroom-card" key={c.id}>
                     <div className="classroom-top">
-                      <span className="topic-icon mint">
+                      <span className="topic-icon blue">
                         <GraduationCap size={27} />
                       </span>
                       <span className="badge neutral">{c.term}</span>
@@ -872,7 +872,7 @@ export default function App() {
                     <h2>Prepare sua próxima aula</h2>
                     <p>O mesmo formato pedagógico em cada desafio.</p>
                     <button onClick={() => setModal('create-class')}>
-                      <span className="topic-icon mint">
+                      <span className="topic-icon blue">
                         <Users />
                       </span>
                       <span>
@@ -967,7 +967,7 @@ export default function App() {
                   <p>{activeProblem.objective}</p>
                 </div>
                 <div className="problem-title-meta">
-                  <span className="badge green">{activeProblem.difficulty}</span>
+                  <span className="badge blue">{activeProblem.difficulty}</span>
                   <span>
                     <Clock3 size={16} />{' '}
                     {fmt(
@@ -1165,7 +1165,7 @@ export default function App() {
       {topic && (
         <Modal title={topic.title} onClose={() => setTopic(null)} wide>
           <div className="topic-modal-intro">
-            <span className="topic-icon mint">
+            <span className="topic-icon blue">
               <TopicIcon id={topic.id} size={27} />
             </span>
             <p>{topic.description}</p>
@@ -1399,7 +1399,7 @@ export default function App() {
       {modal === 'help' && (
         <Modal title="Uma ideia de cada vez" onClose={() => setModal(null)}>
           <div className="help-content">
-            <span className="topic-icon mint">
+            <span className="topic-icon blue">
               <Sprout size={28} />
             </span>
             <h3>Explore. Experimente. Evolua.</h3>

@@ -1,6 +1,6 @@
 # Design inicial
 
-Direção: um ambiente de aprendizagem calmo e universitário, com verde profundo, papel claro, tons de sálvia e ilustrações geométricas de código. A linguagem incentiva tentativa e compreensão, sem transformar a disciplina em um ranking competitivo.
+Direção: um ambiente de aprendizagem calmo e universitário, com azul índigo, fundos neutros, detalhes em violeta e ilustrações geométricas de código. A linguagem incentiva tentativa e compreensão, sem transformar a disciplina em um ranking competitivo.
 
 ## Telas entregues
 
@@ -28,13 +28,13 @@ Também foi revisado o [dashboard em celular de 390 px](images/mobile.jpg), com 
 
 | Token | Valor/base | Aplicação |
 | --- | --- | --- |
-| Verde profundo | `#183d2e` | Títulos e identidade |
-| Verde de ação | `#295b43` | Ações principais |
-| Fundo | `#f8f9f5` | Área de estudo |
-| Superfície | `#fdfefa` | Cartões e formulários |
-| Sálvia | `#e8f1df` | Destaques pedagógicos |
-| Texto secundário | `#66745c` / `#667461` | Descrições e ajuda |
-| Borda | `#e5e9e1` | Divisões leves |
+| Azul profundo | `#202947` | Títulos e identidade |
+| Índigo de ação | `#4f46e5` | Ações principais |
+| Fundo | `#f7f8fc` | Área de estudo |
+| Superfície | `#ffffff` | Cartões e formulários |
+| Azul suave | `#e9edff` | Destaques pedagógicos |
+| Texto secundário | `#63708a` / `#64708b` | Descrições e ajuda |
+| Borda | `#e4e7f0` | Divisões leves |
 | Tipografia | Manrope + DM Sans | Títulos e texto; fallbacks de sistema |
 | Código | SFMono / Consolas / Liberation Mono | Editor e pseudocódigo |
 

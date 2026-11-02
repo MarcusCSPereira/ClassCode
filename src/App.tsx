@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
   ArrowDownToLine,
   ArrowLeft,
@@ -125,6 +125,8 @@ const fmt = (seconds: number) =>
 
 export default function App() {
   const [state, setState] = useState(readState);
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [page, setPage] = useState<Page>(readPage);
   const [activeProblem, setActiveProblem] = useState<Problem>(
     () =>
@@ -159,7 +161,7 @@ export default function App() {
       const current = readPage();
       setPage(current);
       if (current === 'problem') {
-        const p = visibleProblems(problems, readState()).find(
+        const p = visibleProblems(problems, stateRef.current).find(
           (p) => p.id === location.hash.split('/')[1],
         );
         if (p) {
@@ -167,9 +169,13 @@ export default function App() {
           setState((s) =>
             s.startedAt[p.id] ? s : { ...s, startedAt: { ...s.startedAt, [p.id]: Date.now() } },
           );
+        } else {
+          setPage('problems');
+          location.hash = 'problems';
         }
       }
     };
+    handle();
     window.addEventListener('hashchange', handle);
     return () => window.removeEventListener('hashchange', handle);
   }, []);

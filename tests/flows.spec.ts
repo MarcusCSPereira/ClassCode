@@ -5,8 +5,7 @@ async function nav(page: Page, name: string | RegExp) {
   await page.getByRole('button', { name, exact: true }).click();
 }
 test('aluno salva rascunhos por linguagem e declara conclusão com reflexão', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Começar minha jornada' }).click();
+  await page.goto('/#problem/sum');
   await expect(page.getByRole('heading', { name: 'O primeiro de muitos' })).toBeVisible();
   const code = page.getByLabel('Editor de código');
   await code.fill('print(sum(map(int, input().split())))');

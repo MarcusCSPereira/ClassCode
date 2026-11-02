@@ -22,6 +22,8 @@ Direção: um ambiente de aprendizagem calmo e universitário, com verde profund
 ![Laboratório visual](images/laboratorio.jpg)
 ![Painel do professor](images/professor.jpg)
 
+Também foi revisado o [dashboard em celular de 390 px](images/mobile.jpg), com navegação lateral recolhida e cards em uma coluna.
+
 ## Tokens e componentes
 
 | Token | Valor/base | Aplicação |

@@ -59,6 +59,9 @@ test('professor cria turma e questão no padrão e aluno entra pelo código', as
     await page.getByLabel(text, { exact: false }).fill('Pense em somar os valores.');
   await page.getByRole('button', { name: 'Publicar desafio na demonstração' }).click();
   await expect(page.getByRole('button', { name: /Soma da turma B/ })).toBeVisible();
+  await page.getByRole('button', { name: /Soma da turma B/ }).click();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Soma da turma B', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Alterar perfil da demonstração' }).click();
   await page.getByRole('combobox', { name: 'Perspectiva', exact: true }).selectOption('student');
   await page.getByRole('button', { name: 'Acessar demonstração' }).click();

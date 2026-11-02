@@ -2,12 +2,15 @@
 
 Data: 02/11/2026. Este relatório cobre a demonstração e a fundação de banco, não uma implantação institucional concluída.
 
+**Resultado da primeira execução no GitHub:** [Quality aprovado](https://github.com/MarcusCSPereira/ClassCode/actions/runs/41504696808), com build, 10 testes de domínio, 8 cenários E2E (quatro em cada viewport) e verificações de banco. Todos passaram sem retries.
+
 ## Verificações locais
 
 - TypeScript estrito, testes de domínio e build de produção: `npm run check`.
 - **10 testes de domínio**: limites temporais de dicas, relógio retrocedido, questão incompleta, links de judge, grafo curricular sem ciclos, filtro de conteúdo local e frames de busca/ordenação.
 - **PostgreSQL 16 temporário**: criação de turma pelo professor, matrícula idempotente, leitura restrita por turma, negação a outro professor/aluno, bloqueio de autopromoção de papel e de timestamp de tentativa, dicas antes/depois do prazo, registro de leitura e distinção de conclusão autodeclarada.
 - Revisão visual e funcional no navegador: desktop e celular, navegação, rascunhos, perfil, turmas, registro de conclusão e laboratório.
+- Largura conferida em 390 px: dashboard e laboratório com `scrollWidth = innerWidth`, sem rolagem horizontal.
 
 ## Testes de navegação no CI
 

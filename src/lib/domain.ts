@@ -82,9 +82,12 @@ export function visibleProblems(catalog: Problem[], state: DemoState): Problem[]
     ),
   ];
 }
-/** Catalog problems have no class and belong to the seeded demo class. */
+export const FICTITIOUS_CLASS_ID = 'demo-ficticia';
+/** Catalog problems have no class: they are the base trail of the seeded demo classes. */
 export function belongsToClassroom(p: { authorClassId?: string }, classroomId: string) {
-  return (p.authorClassId ?? 'demo-class') === classroomId;
+  return p.authorClassId
+    ? p.authorClassId === classroomId
+    : classroomId === 'demo-class' || classroomId === FICTITIOUS_CLASS_ID;
 }
 export function downloadFile(content: string, filename: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));

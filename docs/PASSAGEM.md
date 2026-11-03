@@ -39,6 +39,58 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-21
+
+**Itens do backlog:** CC-21 (concluído). Com ele, a frente Pedagógica da Entrega 2 está completa: CC-00, CC-15, CC-16, CC-17, CC-19 e CC-21.
+
+**Feito**
+
+- `src/data/fictitiousClass.ts`: a turma **"Turma de demonstração · dados fictícios"** (`FICTITIOUS_CLASS`, com `fictitious: true`) e `fictitiousActivity(now)`, uma função pura e determinística que gera 8 alunos. Os horários são relativos a `now`, então as mesmas situações aparecem em qualquer dia. Há um aluno para cada situação:
+  - Aline avança com pouca ajuda;
+  - Bruno ainda não começou;
+  - Camila está inativa há 10 dias;
+  - Diego está travado em 2 desafios;
+  - Elisa depende de dicas (média de 2,8);
+  - Felipe e Gabriela seguem regulares;
+  - Heitor concluiu a trilha.
+- "Quantos são diferentes?" lidera o ranking de ajuda: todos que a abriram usaram as 3 dicas e metade concluiu.
+- `DemoRepository`: para o professor, `listClassrooms` inclui a turma fictícia e `classroomActivity` a devolve. Para o aluno, o acesso é negado.
+- O painel recebe a turma fictícia no seletor e, quando ela está selecionada, mostra um aviso fixo: "Dados fictícios. Esta turma e seus alunos foram gerados para demonstrar o painel. Nenhum aluno real está representado."
+- A turma fictícia **não** entra no estado salvo nem em "Minhas turmas": não dá para entrar nela por código, e a turma inicial continua só com a identidade real do navegador.
+- `belongsToClassroom` passa a tratar o catálogo como a trilha base das duas turmas semeadas.
+
+**Estado verificado**
+
+- `npm run check`: TypeScript, 56 testes de unidade (5 novos) e build passaram. Os testes cobrem determinismo, independência da data, ausência de eventos no futuro, os quatro sinais, o ranking, a distribuição por etapa e o acesso só para o professor.
+- `npm run test:e2e`: 20 de 20 (10 cenários × desktop e celular). O novo cenário:
+  - a turma real não mostra o aviso;
+  - na fictícia aparecem o aviso, 8 alunos, os quatro sinais, o ranking liderado por "Quantos são diferentes?" e "Sem etapa em aberto";
+  - não há rolagem horizontal, e a turma não aparece em "Minhas turmas".
+- Revisão visual rápida em desktop (tema claro): aviso e resumo (8 matriculados, 6 ativos).
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local); o SQL não mudou.
+
+**Decisões tomadas**
+
+- A turma fictícia vive só no repositório da demo e no painel, nunca no estado salvo, para não se misturar com dados reais.
+- O contador "Turmas na demonstração" passa a incluí-la (mostra 2 na primeira abertura).
+- Nomes no formato "Nome + inicial", genéricos e claramente fictícios.
+
+**Ficou de fora / limites conhecidos**
+
+- No modo remoto (CC-03), a turma fictícia não deve existir. Ela só faz sentido no `DemoRepository`; o `App` hoje a acrescenta ao seletor e deve deixar de fazer isso quando `repository.mode === 'remote'`.
+- As capturas em `docs/images/` continuam desatualizadas.
+
+**Próximo passo esperado**
+
+1. **Revisão:** enviar a branch ao GitHub e abrir o PR da frente Pedagógica para o time revisar. Todos os commits ainda são locais.
+2. **Decisões D1–D5** ([ENTREGA-2.md](ENTREGA-2.md#10-decisões-pendentes-do-time)). D1 (Supabase) destrava a frente Plataforma.
+3. **Frente Plataforma:** CC-01 → CC-02 → CC-03 → CC-04 → CC-05/CC-20 → CC-06 → CC-07 e CC-18. As telas da frente Pedagógica já consomem `ClassCodeRepository`; o trabalho é implementar `src/data/supabaseRepository.ts` e mover as leituras.
+4. Antes da apresentação: atualizar as capturas (visão geral, trilha e painel com a turma fictícia) e ensaiar o roteiro do [PLANO.md](PLANO.md#roteiro-da-apresentação-68-minutos).
+
+**Bloqueios**
+
+- CC-01 e CC-18 dependem de D1 (alguém do time criar o projeto Supabase).
+
 ### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-19
 
 **Itens do backlog:** CC-19 (concluído no modo demo)

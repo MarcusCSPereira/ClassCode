@@ -67,7 +67,7 @@ Itens adicionados na Entrega 2. Regras, contratos e critérios completos em [ENT
 | CC-18 | P0 | RPCs `classroom_activity` e `my_activity` em migration nova, com testes de negação | CC-01 |
 | CC-19 | P0 | Painel de métricas do professor com mapa aluno × questão e CSV. **Concluído em 02/11 no modo demo** | CC-00, CC-17, CC-18 |
 | CC-20 | P0 | Trilha base no servidor e importação idempotente para a turma | CC-05 |
-| CC-21 | P1 | Turma fictícia no modo demo para demonstrar o painel, identificada como tal | CC-19 |
+| CC-21 | P1 | Turma fictícia no modo demo para demonstrar o painel, identificada como tal. **Concluído em 02/11** | CC-19 |
 
 P0 é o MVP; P1 melhora a experiência quando o fluxo estiver estável; P2 não bloqueia a apresentação. Cada integrante assume uma entrega ou grupo coerente conforme disponibilidade, sem pressupor uma equipe específica.
 
@@ -124,6 +124,6 @@ A primeira implantação institucional é para uma instituição por projeto/dep
 2. Professor cria turma e publica questão com objetivo e dicas (2 min).
 3. Aluno entra, escreve rascunho e consulta ajuda já liberada em uma tentativa preparada (2 min).
 4. Visualização de busca binária com previsão do próximo passo (1 min).
-5. Evidência e relatório do professor; o que já funciona e próxima extensão (1–2 min).
+5. Evidência e relatório do professor: sinais de atenção, questões que mais exigiram ajuda e CSV; o que já funciona e próxima extensão (1–2 min). Sem turma real com alunos, usar a "Turma de demonstração · dados fictícios" e dizer que é fictícia.
 
 Não manipular relógio ou esconder limites durante a demonstração. Para apresentar dicas sem esperar 12 minutos, preparar uma tentativa antes ou usar um ambiente de teste explicitamente identificado.

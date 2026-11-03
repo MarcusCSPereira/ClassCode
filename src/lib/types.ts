@@ -36,6 +36,8 @@ export interface Classroom {
   code: string;
   teacher: string;
   term: string;
+  /** Generated demo data with no real students; the UI must say so. */
+  fictitious?: boolean;
 }
 export type HintOrdinal = 1 | 2 | 3;
 export interface HintView {

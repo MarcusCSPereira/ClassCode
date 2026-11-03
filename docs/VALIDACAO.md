@@ -81,3 +81,12 @@ Painel de acompanhamento da turma (modo demo).
 - Revisão visual com dados semeados: desktop 1440 px (claro) e celular 375 px (escuro). As tabelas rolam dentro do quadro; a página não rola na horizontal.
 - Sem teste automatizado: o estado de erro, porque o `DemoRepository` não falha nesse caminho.
 - Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.
+
+## Entrega 2 · CC-21 (02/11/2026)
+
+Turma fictícia para demonstrar o painel do professor.
+
+- `npm run check`: TypeScript, **56 testes de unidade** (5 novos em `fictitiousClass.test.ts`) e build.
+- `npm run test:e2e`: **10 cenários em cada viewport (20 execuções)**. O novo cobre o aviso de dados fictícios (ausente na turma real), os 8 alunos, os quatro sinais, o ranking, "Sem etapa em aberto", a ausência de rolagem horizontal e que a turma não aparece em "Minhas turmas".
+- Os testes de unidade garantem geração determinística, resultado igual em qualquer data, nenhum evento no futuro, uso só do catálogo e acesso só para o professor.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.

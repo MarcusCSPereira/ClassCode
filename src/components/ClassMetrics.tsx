@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, CheckCheck, CircleAlert, Download, RotateCcw, Users } from 'lucide-react';
+import {
+  Activity,
+  CheckCheck,
+  CircleAlert,
+  Download,
+  FlaskConical,
+  RotateCcw,
+  Users,
+} from 'lucide-react';
 import { modules } from '../lib/catalog';
 import { belongsToClassroom, downloadFile, slug } from '../lib/domain';
 import {
@@ -125,6 +133,15 @@ export default function ClassMetrics({
         )}
       </div>
 
+      {classroom?.fictitious && (
+        <div className="info-strip metrics-notice" role="note">
+          <FlaskConical size={19} />
+          <p>
+            <strong>Dados fictícios.</strong> Esta turma e seus alunos foram gerados para demonstrar
+            o painel. Nenhum aluno real está representado.
+          </p>
+        </div>
+      )}
       {!classroom ? (
         <div className="empty card">
           <Users size={30} />

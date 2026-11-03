@@ -287,7 +287,7 @@ Situação dos pontos de atenção:
 
 CC-01 a CC-14 continuam definidos no [PLANO.md](PLANO.md#backlog-executável). Abaixo estão os itens novos; CC-08 passa a ser atendido por CC-17, CC-18 e CC-19.
 
-**Situação:** CC-00, CC-15, CC-16, CC-17 e CC-19 concluídos em 02/11 na branch `feat/entrega-2-mvp`. CC-16 e CC-19 funcionam no modo demo e passam a valer para usuários reais com CC-02 a CC-04 e CC-18 (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
+**Situação:** a frente Pedagógica está completa. CC-00, CC-15, CC-16, CC-17, CC-19 e CC-21 foram concluídos em 02/11 na branch `feat/entrega-2-mvp`. CC-16 e CC-19 funcionam no modo demo e passam a valer para usuários reais com CC-02 a CC-04 e CC-18 (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os itens da frente Plataforma estão abertos e dependem de D1.
 
 | ID | Prior. | Frente | Entrega e critério de aceite | Depende de |
 | --- | --- | --- | --- | --- |

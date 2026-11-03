@@ -13,7 +13,7 @@ Base React + TypeScript + Vite, com design responsivo e fluxos navegáveis. **É
 | Funcionalidade | Estado nesta base |
 | --- | --- |
 | Dashboard, desafios, turmas e painel do professor | Interface funcional com dados locais |
-| Acompanhamento do professor | Métricas por aluno e por questão, sinais de atenção, mapa aluno × questão e CSV ([catálogo](docs/ENTREGA-2.md#6-métricas-do-professor-catálogo-v1)); na demo, a turma tem só a identidade local |
+| Acompanhamento do professor | Métricas por aluno e por questão, sinais de atenção, mapa aluno × questão e CSV ([catálogo](docs/ENTREGA-2.md#6-métricas-do-professor-catálogo-v1)); na demo, há uma turma de dados fictícios, identificada como tal, para ver o painel com 8 alunos |
 | Trilha do básico ao avançado | 12 etapas mapeadas; 7 desafios nas 5 primeiras |
 | Evolução automática | Próximo passo recomendado com motivo e estado de cada etapa conforme conclusões e dicas usadas ([regras](docs/ENTREGA-2.md#5-evolução-automática-e-gradual-modelo-v1)); dados locais por enquanto |
 | Criar turma e entrar com código | Funciona no mesmo navegador; experimente `CLASS26` |

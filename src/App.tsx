@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { demoStore, repository } from './data';
+import { FICTITIOUS_CLASS } from './data/fictitiousClass';
 import { describeError, RepositoryError, type ProblemSummary } from './data/repository';
 import type { ActivityRow } from './data/repository';
 import { modules, problems } from './lib/catalog';
@@ -314,7 +315,7 @@ export default function App() {
           {page === 'teacher' && (
             <TeacherPage
               teacher={teacher}
-              classes={state.classes}
+              classes={[...state.classes, FICTITIOUS_CLASS]}
               problems={all}
               customProblems={state.customProblems}
               solvedCount={solvedCount}

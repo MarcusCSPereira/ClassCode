@@ -8,6 +8,7 @@ import {
 } from '../lib/domain';
 import type { DemoState, Problem } from '../lib/types';
 import type { DemoStore } from './demoStore';
+import { FICTITIOUS_CLASS, fictitiousActivity } from './fictitiousClass';
 import {
   RepositoryError,
   type ActivityRow,
@@ -69,7 +70,8 @@ export function createDemoRepository(
     mode: 'demo',
     async listClassrooms() {
       const s = state();
-      return s.classes.filter((c) => s.role === 'teacher' || s.joinedClassIds.includes(c.id));
+      if (s.role === 'teacher') return [...s.classes, FICTITIOUS_CLASS];
+      return s.classes.filter((c) => s.joinedClassIds.includes(c.id));
     },
     async createClassroom(name, term) {
       requireTeacher();
@@ -166,6 +168,7 @@ export function createDemoRepository(
     async classroomActivity(classroomId) {
       // Every local class belongs to the teacher perspective of the single demo identity.
       requireTeacher();
+      if (classroomId === FICTITIOUS_CLASS.id) return fictitiousActivity(now());
       const s = state();
       if (!s.classes.some((c) => c.id === classroomId)) throw new RepositoryError('owner_required');
       if (!s.joinedClassIds.includes(classroomId)) return { roster: [], activity: [] };

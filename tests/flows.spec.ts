@@ -276,3 +276,37 @@ test('professor acompanha a turma e exporta o CSV', async ({ page }) => {
     true,
   );
 });
+
+test('turma fictícia demonstra o painel e se identifica como fictícia', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Alterar perfil da demonstração' }).click();
+  await page.getByRole('combobox', { name: 'Perspectiva', exact: true }).selectOption('teacher');
+  await page.getByRole('button', { name: 'Acessar demonstração' }).click();
+  const panel = page.getByRole('region', { name: 'Acompanhamento da turma' });
+  await expect(panel).toContainText('Conclusões são autodeclaradas');
+  await expect(panel.getByRole('note')).toHaveCount(0);
+
+  await panel
+    .getByLabel('Turma acompanhada')
+    .selectOption({ label: 'Turma de demonstração · dados fictícios' });
+  await expect(panel.getByRole('note')).toContainText('Dados fictícios.');
+  const table = panel.getByRole('region', { name: 'Tabela de alunos' });
+  await expect(table.getByRole('row')).toHaveCount(9);
+  for (const signal of ['Ainda não começou.', 'Inativo.', 'Travado.', 'Muito dependente de dicas.'])
+    await expect(table).toContainText(signal);
+  await expect(
+    panel
+      .getByRole('region', { name: 'Questões que mais exigiram ajuda' })
+      .getByRole('listitem')
+      .first(),
+  ).toContainText('Quantos são diferentes?');
+  await expect(panel.getByRole('region', { name: 'Alunos por etapa' })).toContainText(
+    'Sem etapa em aberto',
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+
+  await nav(page, 'Minhas turmas');
+  await expect(page.getByText('dados fictícios')).toHaveCount(0);
+});

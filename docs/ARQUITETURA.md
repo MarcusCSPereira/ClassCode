@@ -4,6 +4,8 @@
 
 SPA em React/TypeScript/Vite. Navegação por hash; `localStorage` guarda dados em `classcode.demo.v1`. Não existe conexão de rede com Supabase ou Judge0. `src/lib/types.ts` é o contrato da demonstração, não um modelo gerado do banco.
 
+Desde o CC-00, cada tela fica em `src/pages/`, cada modal em `src/modals/`, e as escritas passam pela interface `ClassCodeRepository` de `src/data/repository.ts`. O `DemoRepository` a implementa sobre uma store local (`src/data/demoStore.ts`, estado versão 2 com migração da v1). As leituras ainda vêm da store; CC-03 as move para o repositório e adiciona a implementação Supabase. Contrato e pendências: [ENTREGA-2.md](ENTREGA-2.md#7-contrato-de-repositório).
+
 ```mermaid
 flowchart LR
   A[React: aluno e professor] --> D[Estado local da demonstração]
@@ -86,7 +88,7 @@ O schema já nega acesso aos dados privados por padrão; as funcionalidades acim
 ## Migração do frontend
 
 1. Manter `DemoState` exclusivamente no modo demo. Não usar o seletor de papel para login real.
-2. Criar adaptadores `AuthRepository`, `ClassroomRepository`, `ProblemRepository` e `ProgressRepository`.
+2. ~~Criar adaptadores por entidade.~~ Substituído por uma interface única, `ClassCodeRepository`, já usada pelas escritas (CC-00). Falta a implementação Supabase e o login (CC-02/CC-03).
 3. Mapear `moduleId → module_id`, `input → input_spec`, dificuldades PT-BR → enum do banco e demais campos explicitamente.
 4. Substituir IDs de catálogo por UUIDs de questões persistidas. O seed atual contém somente módulos.
 5. **Remover textos de dicas do catálogo/bundle do modo institucional.** Buscar cada dica por `get_hint`, depois da autorização do servidor.

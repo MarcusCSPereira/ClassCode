@@ -69,8 +69,12 @@ O CI executa domínio, build, navegação e permissões do banco. Os testes SQL 
 
 ```text
 src/
-  App.tsx                  Navegação e composição dos fluxos
-  components/              Modal, formulário de questão e visualizador
+  App.tsx                  Navegação, barra lateral e composição das telas
+  pages/                   Uma tela por arquivo (visão geral, trilha, desafios, prática...)
+  modals/                  Diálogos: turma, perfil, conclusão, ajuda e tópico
+  components/              Componentes reutilizáveis, editor e visualizador
+  data/repository.ts       Contrato entre a interface e a fonte de dados
+  data/demoRepository.ts   Implementação da demonstração sobre localStorage
   lib/catalog.ts           Currículo, questões iniciais e templates de linguagem
   lib/domain.ts            Regras de dicas, conteúdo e demonstração
   lib/algorithms.ts        Geradores de passos das animações

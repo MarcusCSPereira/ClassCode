@@ -188,37 +188,42 @@ Depois do MVP: "revelou assim que liberou" (dica aberta em até 30 s da liberaç
 
 ## 7. Contrato de repositório
 
-A UI passa a depender de uma interface implementada pelo modo demo e pelo modo remoto. Nenhuma tela chama `localStorage` ou Supabase diretamente.
+A UI depende de uma interface implementada pelo modo demo e, a partir de CC-03, pelo modo remoto. Nenhuma tela chama `localStorage` ou Supabase diretamente. **Implementado no CC-00** em [`src/data/repository.ts`](../src/data/repository.ts):
 
 ```ts
-// src/data/repository.ts
 export interface ClassCodeRepository {
   readonly mode: 'demo' | 'remote';
   listClassrooms(): Promise<Classroom[]>;
   createClassroom(name: string, term: string): Promise<{ id: string; code: string }>;
   joinClassroom(code: string): Promise<string>;
   listProblems(): Promise<ProblemSummary[]>; // sem o texto das dicas
-  startAttempt(problemId: string): Promise<string>; // started_at do servidor
-  revealHint(problemId: string, ordinal: 1 | 2 | 3): Promise<string>;
+  publishProblem(problem: NewProblem): Promise<string>;
+  startAttempt(problemId: string): Promise<string>; // idempotente; started_at do servidor
+  revealHint(problemId: string, ordinal: HintOrdinal): Promise<string>; // registra a leitura
   reportProgress(problemId: string, evidence: string): Promise<void>;
+  reopenProblem(problemId: string): Promise<void>;
   myActivity(): Promise<ActivityRow[]>;
-  classroomActivity(
-    classroomId: string,
-  ): Promise<{ roster: RosterEntry[]; activity: ActivityRow[] }>;
-  // Auth, publicação de questões e importação da trilha base entram em CC-02, CC-05 e CC-20.
+  classroomActivity(classroomId: string): Promise<ClassroomActivity>;
 }
 ```
 
-Pontos de atenção:
+Falhas usam `RepositoryError` com códigos iguais às exceções do SQL (`teacher_required`, `owner_required`, `invalid_invite`, `problem_not_accessible`, `attempt_required`, `hint_locked`, `invalid_problem`, `invalid_evidence`) e mensagem em português; `describeError` produz o texto para a interface. Login (CC-02) e importação da trilha base (CC-20) ainda vão entrar na interface.
 
-- `Problem.hints` hoje é obrigatório e carrega o texto. Separar em `ProblemSummary` (enunciado e horários de liberação) e texto obtido por `revealHint`.
-- No modo remoto, o catálogo com dicas não pode entrar no bundle: importá-lo somente dentro do `DemoRepository`, com `import()` dinâmico.
-- `DemoState` precisa de uma versão 2 com horário de leitura das dicas e de conclusão, migrando a v1 sem perder rascunhos.
-- Mapeamentos de campos e dificuldade seguem a seção "Migração do frontend" de [ARQUITETURA.md](ARQUITETURA.md).
+Situação dos pontos de atenção:
+
+| Ponto | Situação |
+| --- | --- |
+| `ProblemSummary` sem texto de dica; telas obtêm o texto por `revealHint` | Feito no CC-00. A tela de prática busca de novo as dicas já vistas ao abrir, como fará no modo remoto |
+| `DemoState` versão 2 com horários de leitura de dica e de conclusão, migrando a v1 | Feito no CC-00, com testes de unidade e um E2E que abre dados salvos na v1 |
+| Catálogo com dicas fora do bundle no modo remoto | **Pendente (CC-03).** `lib/catalog.ts` mistura currículo (`modules`, `starters`) com as questões e dicas da demo, e é importado pelo `App`, pelo `DemoRepository` e pelas telas. Sugestão: separar em `curriculum.ts` e `demoProblems.ts`, este carregado só pelo `DemoRepository` |
+| Leituras pelo repositório, com carregamento e erro | **Pendente (CC-03).** As telas ainda leem o estado local por `useSyncExternalStore`; só as escritas passam pelo repositório |
+| Mapeamentos de campos e dificuldade | Seguem a seção "Migração do frontend" de [ARQUITETURA.md](ARQUITETURA.md), em CC-03 |
 
 ## 8. Backlog da Entrega 2
 
 CC-01 a CC-14 continuam definidos no [PLANO.md](PLANO.md#backlog-executável). Abaixo estão os itens novos; CC-08 passa a ser atendido por CC-17, CC-18 e CC-19.
+
+**Situação:** CC-00 concluído em 02/11 na branch `feat/entrega-2-mvp` (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
 
 | ID | Prior. | Frente | Entrega e critério de aceite | Depende de |
 | --- | --- | --- | --- | --- |

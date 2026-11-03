@@ -32,7 +32,15 @@ Resultados das execuções estão no [GitHub Actions](https://github.com/MarcusC
 - Somente as primeiras cinco etapas têm questões; os tópicos avançados estão mapeados, com conteúdo em preparação.
 - Acessibilidade foi considerada no design e na implementação, mas não há declaração de conformidade ou auditoria assistiva completa.
 
-
 ## Tema e realce de sintaxe
 
 A suíte E2E foi ampliada para cinco cenários em cada viewport (10 execuções): além dos fluxos existentes, verifica alternância e persistência de tema, tokens de palavras-chave/strings/números em Python/Java/C++, preservação dos rascunhos e largura móvel. O editor passou a usar um campo editável CodeMirror; os testes verificam o conteúdo renderizado, em vez de depender de uma implementação com textarea.
+
+## Entrega 2 · CC-00 (02/11/2026)
+
+Refatoração sem mudança de fluxo: telas divididas em `src/pages/` e `src/modals/`, escritas pelo `ClassCodeRepository` e estado local na versão 2.
+
+- `npm run check`: TypeScript, **21 testes de unidade** (10 anteriores e 11 novos da store e do `DemoRepository`) e build.
+- `npm run test:e2e`: **6 cenários em cada viewport (12 execuções)**. Os cinco anteriores passaram sem alterar asserts; o novo abre dados salvos pela versão 1 e confere rascunho, dica revelada e conclusão.
+- Os testes novos cobrem migração v1 → v2, armazenamento bloqueado, tentativa idempotente, dica antes e depois do prazo com leitura registrada uma vez, conclusão sem tentativa, edição que preserva o horário, reabertura, entrada por código, ações exclusivas do professor e atividade restrita aos desafios da turma.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local nesta máquina). O SQL não foi alterado.

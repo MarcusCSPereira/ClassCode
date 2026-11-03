@@ -253,7 +253,7 @@ Situação dos pontos de atenção:
 
 CC-01 a CC-14 continuam definidos no [PLANO.md](PLANO.md#backlog-executável). Abaixo estão os itens novos; CC-08 passa a ser atendido por CC-17, CC-18 e CC-19.
 
-**Situação:** CC-00 e CC-15 concluídos em 02/11 na branch `feat/entrega-2-mvp` (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
+**Situação:** CC-00, CC-15 e CC-16 concluídos em 02/11 na branch `feat/entrega-2-mvp`; o CC-16 funciona no modo demo e passa a valer para usuários reais com CC-02 a CC-04 (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
 
 | ID | Prior. | Frente | Entrega e critério de aceite | Depende de |
 | --- | --- | --- | --- | --- |

@@ -53,3 +53,12 @@ Motor de progressão em `src/lib/progression.ts`, sem alteração de interface.
 - `npm run test:e2e`: 12 execuções, sem mudança em relação ao CC-00.
 - Os testes novos cobrem os sete casos mínimos da seção 5.4 de [ENTREGA-2.md](ENTREGA-2.md) e também: valores de autonomia, módulo com uma única conclusão, tentativa em módulo aguardando, reforço com a trilha concluída, atividade de desafio não publicado, pré-requisito sem questões, as três faixas de dificuldade adaptativa e o uso das duas conclusões mais recentes.
 - Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.
+
+## Entrega 2 · CC-16 (02/11/2026)
+
+Trilha adaptativa na interface do aluno (modo demo).
+
+- `npm run check`: TypeScript, 38 testes de unidade e build.
+- `npm run test:e2e`: **8 cenários em cada viewport (16 execuções)**. Novos: concluir dois desafios de Fundamentos muda o próximo passo para Laços, marca Fundamentos como Dominado e mostra "Recomendado após Laços & simulação" em Vetores; liberar uma dica não registra leitura, só o clique registra.
+- Revisão visual: desktop 1440 px (claro e escuro), celular 375 px (sem rolagem horizontal), modal da etapa e estado de trilha concluída. Corrigida a sobreposição do selo de estado no cartão compacto do celular.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.

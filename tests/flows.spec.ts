@@ -175,3 +175,55 @@ test('dados salvos pela primeira versão da demo continuam disponíveis', async 
     'Somei os dois números.',
   );
 });
+
+test('trilha recomenda o próximo passo e avança para Laços após dois desafios', async ({
+  page,
+}) => {
+  const card = (title: string) =>
+    page.locator('.topic-card').filter({ has: page.getByRole('heading', { name: title }) });
+  await page.goto('/');
+  const nextStep = page.getByRole('region', { name: /Seu próximo passo/ });
+  await expect(nextStep).toContainText('Você está pronto para começar Primeiros algoritmos.');
+  await expect(nextStep.getByRole('button', { name: /O primeiro de muitos/ })).toBeVisible();
+  await expect(card('Primeiros algoritmos')).toContainText('Etapa atual');
+  for (const id of ['sum', 'parity']) {
+    await page.goto(`/#problem/${id}`);
+    await page.getByRole('button', { name: 'Registrar conclusão', exact: true }).click();
+    await page
+      .getByLabel('Link da submissão ou reflexão sobre a solução')
+      .fill('Resolvi e testei os exemplos.');
+    await page.getByRole('checkbox').check();
+    await page.getByRole('button', { name: 'Salvar conclusão declarada' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Conclusão declarada · ver registro' }),
+    ).toBeVisible();
+  }
+  await page.goto('/');
+  await expect(nextStep).toContainText('Você resolveu os últimos desafios quase sem dicas.');
+  await expect(nextStep.getByRole('button', { name: /Uma sequência curiosa/ })).toBeVisible();
+  await expect(card('Laços & simulação')).toContainText('Etapa atual');
+  await expect(
+    page.getByText('Conclua o desafio de Laços & simulação · 0/1', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Ver trilha completa' }).click();
+  await expect(card('Primeiros algoritmos')).toContainText('Dominado');
+  await expect(card('Vetores & strings')).toContainText('Recomendado após Laços & simulação');
+});
+
+test('dica liberada só conta como lida depois do clique', async ({ page }) => {
+  const views = () =>
+    page.evaluate(
+      () => JSON.parse(localStorage.getItem('classcode.demo.v1') ?? '{}').hintViews?.sum ?? [],
+    );
+  await page.clock.install({ time: new Date('2026-11-02T15:00:00Z') });
+  await page.goto('/#problem/sum');
+  await page.getByRole('button', { name: 'Dicas progressivas' }).click();
+  await page.clock.fastForward(181000);
+  await expect(page.getByRole('button', { name: 'Revelar dica', exact: true })).toBeVisible();
+  expect(await views()).toEqual([]);
+  await page.getByRole('button', { name: 'Revelar dica', exact: true }).click();
+  await expect(
+    page.getByText('Quais informações entram e qual resultado deve sair?', { exact: true }),
+  ).toBeVisible();
+  expect((await views()).map((v: { ordinal: number }) => v.ordinal)).toEqual([1]);
+});

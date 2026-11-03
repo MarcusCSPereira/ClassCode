@@ -62,7 +62,7 @@ Itens adicionados na Entrega 2. Regras, contratos e critérios completos em [ENT
 | --- | --- | --- | --- |
 | CC-00 | P0 | Dividir `App.tsx` em páginas e criar a interface de repositório com `DemoRepository`, sem mudança visível. **Concluído em 02/11** | Nenhuma |
 | CC-15 | P0 | Motor de progressão: autonomia, estados de módulo e próximo passo recomendado, com testes. **Concluído em 02/11** | Nenhuma |
-| CC-16 | P0 | Trilha adaptativa na UI do aluno: estados, recomendação com motivo e meta derivada | CC-00, CC-15 |
+| CC-16 | P0 | Trilha adaptativa na UI do aluno: estados, recomendação com motivo e meta derivada. **Concluído em 02/11 no modo demo** | CC-00, CC-15 |
 | CC-17 | P0 | Cálculo das métricas e sinais de atenção, com testes | Nenhuma |
 | CC-18 | P0 | RPCs `classroom_activity` e `my_activity` em migration nova, com testes de negação | CC-01 |
 | CC-19 | P0 | Painel de métricas do professor com mapa aluno × questão e CSV | CC-00, CC-17, CC-18 |

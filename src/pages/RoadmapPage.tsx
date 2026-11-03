@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { Map } from 'lucide-react';
 import { modules } from '../lib/catalog';
+import type { ModuleProgress } from '../lib/progression';
 import type { Module } from '../lib/types';
 import type { ProblemSummary } from '../data/repository';
 import ModuleCard from '../components/ModuleCard';
 export default function RoadmapPage({
   problems: all,
-  solved,
+  progress,
+  current,
   onSelectTopic,
 }: {
   problems: ProblemSummary[];
-  solved: string[];
+  /** Null while the student's activity is loading. */
+  progress: Record<string, ModuleProgress> | null;
+  current: string | null;
   onSelectTopic: (m: Module) => void;
 }) {
   const [level, setLevel] = useState('Todos');
@@ -34,6 +38,12 @@ export default function RoadmapPage({
           <p>
             As primeiras {new Set(all.map((p) => p.moduleId)).size} etapas já têm desafios. As
             demais compõem o plano de conteúdo.
+            {current && (
+              <>
+                {' '}
+                Sua etapa atual é <strong>{modules.find((m) => m.id === current)?.title}</strong>.
+              </>
+            )}
           </p>
         </div>
         <span className="badge blue">{all.length} desafios</span>
@@ -56,7 +66,8 @@ export default function RoadmapPage({
               module={m}
               index={modules.indexOf(m)}
               problems={all}
-              solved={solved}
+              progress={progress?.[m.id]}
+              current={m.id === current}
               onSelect={onSelectTopic}
               key={m.id}
             />

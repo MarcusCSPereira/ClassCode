@@ -39,6 +39,54 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-16
+
+**Itens do backlog:** CC-16 (concluído no modo demo)
+
+**Feito**
+
+- O `App.tsx` carrega a atividade do aluno por `repository.myActivity()` e recarrega quando tentativas, dicas ou conclusões mudam. Com ela calcula `moduleStatuses`, `currentModule` e `recommendNext`.
+- **Visão geral:**
+  - A seção "Um novo desafio espera por você" virou **"Seu próximo passo"**: o desafio recomendado, o motivo em texto e um selo (Continuar, Avançar ou Reforçar).
+  - O botão principal e o "Vamos praticar" da barra lateral abrem a recomendação; com a trilha completa, levam à trilha.
+  - A meta fixa "3 desafios de fundamentos" virou **"Seu objetivo atual"**, derivado da etapa atual ("Conclua o desafio de Laços & simulação · 0/1").
+  - Os três cartões da trilha começam na etapa atual.
+- **Cartões de etapa** (`ModuleCard`): selo de estado (Etapa atual, Disponível, Em andamento, Aguardando, Concluído, Dominado) e o estado em texto ("Recomendado após Laços & simulação", "1 de 2 para concluir"). A barra mostra o avanço até concluir. Os rótulos ficam em `src/components/moduleStatus.ts`.
+- **Minha trilha:** mesmos cartões, com a etapa atual destacada e citada no banner.
+- **Modal da etapa:** "Sua situação: Dominado · 2/3 desafios concluídos · autonomia média de 88%".
+- Enquanto a atividade carrega, os botões de praticar ficam desabilitados e a seção mostra "Calculando o próximo passo…". No demo isso dura um instante; no modo remoto será o estado de carregamento.
+
+**Estado verificado**
+
+- `npm run check`: TypeScript, 38 testes de unidade e build passaram.
+- `npm run test:e2e`: 16 de 16 (8 cenários × desktop e celular). Dois cenários novos:
+  - critério de aceite: concluir 2 desafios de Fundamentos muda a recomendação para "Uma sequência curiosa", em Laços;
+  - liberar uma dica não registra leitura; só o clique registra.
+- Revisão visual no navegador: desktop 1440 px nos temas claro e escuro, celular 375 px, modal da etapa e trilha concluída. Achado e corrigido: no cartão compacto do celular (≤ 430 px) o selo cobria a descrição. Agora ele fica oculto ali, como o número da etapa, e o estado continua em texto.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local); o SQL não mudou.
+
+**Decisões tomadas**
+
+- O selo do tipo de recomendação usa o estilo `subtle-badge`, que o design já esconde abaixo de 1190 px; o motivo em texto aparece sempre.
+- A meta usa o singular quando a etapa tem um desafio ("Conclua o desafio de…").
+
+**Ficou de fora / limites conhecidos**
+
+- Funciona só no modo demo, com a identidade local única. O critério da seção 11 ("recomendação muda sozinha") só fecha com usuários reais (CC-02 a CC-04).
+- A página "Desafios" não destaca o desafio recomendado.
+- As capturas em `docs/images/` ainda mostram a visão geral anterior. Atualizar antes da apresentação.
+- Falha ao carregar a atividade aparece só no aviso flutuante; um estado de erro na seção fica para o CC-03.
+
+**Próximo passo esperado**
+
+1. **CC-17 (frente Pedagógica):** criar `src/lib/metrics.ts` com o catálogo da seção 6 de [ENTREGA-2.md](ENTREGA-2.md#6-métricas-do-professor-catálogo-v1), sobre `ClassroomActivity`. Reaproveitar `hintsBeforeCompletion`, `autonomy` e `currentModule`. Testar com uma turma fictícia em que haja um aluno sem tentativas, um inativo, um travado e um dependente de dicas.
+2. **CC-19:** painel do professor sobre `repository.classroomActivity()`, depois do CC-17.
+3. Continua valendo: decidir D1–D5 e enviar a branch ao GitHub para revisão (CC-00, CC-15 e CC-16 ainda são commits locais).
+
+**Bloqueios**
+
+- Nenhum para CC-17. CC-01 segue dependendo de D1.
+
 ### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-15
 
 **Itens do backlog:** CC-15 (concluído)

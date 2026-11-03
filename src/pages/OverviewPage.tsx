@@ -14,17 +14,33 @@ import {
 } from 'lucide-react';
 import { modules } from '../lib/catalog';
 import type { Page } from '../lib/navigation';
+import type { ModuleProgress, Recommendation } from '../lib/progression';
 import type { Module } from '../lib/types';
 import type { ProblemSummary } from '../data/repository';
 import ModuleCard from '../components/ModuleCard';
 import ProblemList from '../components/ProblemList';
 import Progress from '../components/Progress';
+const goalText = (required: number, total: number) =>
+  required < total
+    ? `Conclua ${required} de ${total} desafios`
+    : required === 1
+      ? 'Conclua o desafio'
+      : `Conclua os ${total} desafios`;
+const kindLabels: Record<Recommendation['kind'], string> = {
+  continue: 'CONTINUAR',
+  advance: 'AVANÇAR',
+  reinforce: 'REFORÇAR',
+};
 export default function OverviewPage({
   name,
   teacher,
   problems: all,
   solved,
-  next,
+  loading,
+  progress,
+  current,
+  recommendation,
+  onPractice,
   onOpenProblem,
   onNavigate,
   onPrimaryAction,
@@ -34,7 +50,12 @@ export default function OverviewPage({
   teacher: boolean;
   problems: ProblemSummary[];
   solved: string[];
-  next: ProblemSummary;
+  /** True until the student's activity arrives; progress is not meaningful before that. */
+  loading: boolean;
+  progress: Record<string, ModuleProgress>;
+  current: string | null;
+  recommendation: Recommendation | null;
+  onPractice: () => void;
   onOpenProblem: (p: ProblemSummary) => void;
   onNavigate: (page: Page) => void;
   onPrimaryAction: () => void;
@@ -42,6 +63,18 @@ export default function OverviewPage({
 }) {
   const solvedCount = all.filter((p) => solved.includes(p.id)).length;
   const percent = Math.round((solvedCount / Math.max(all.length, 1)) * 100);
+  const recommended = recommendation && all.find((p) => p.id === recommendation.problemId);
+  const finished = !loading && !recommendation;
+  const currentTitle = modules.find((m) => m.id === current)?.title;
+  const goal = current ? progress[current] : undefined;
+  // Show the current stage and the two after it.
+  const first = Math.max(
+    0,
+    Math.min(
+      modules.findIndex((m) => m.id === current),
+      modules.length - 3,
+    ),
+  );
   return (
     <>
       <div className="page-title">
@@ -72,8 +105,12 @@ export default function OverviewPage({
                 Entenda a ideia, visualize o algoritmo e<br className="desktop-break" /> transforme
                 conhecimento em código.
               </p>
-              <button className="button dark" onClick={() => onOpenProblem(next)}>
-                {solvedCount ? 'Continuar aprendendo' : 'Começar minha jornada'}
+              <button className="button dark" onClick={onPractice} disabled={loading}>
+                {finished
+                  ? 'Ver minha trilha'
+                  : solvedCount
+                    ? 'Continuar aprendendo'
+                    : 'Começar minha jornada'}
                 <ArrowUpRight size={17} />
               </button>
               <div className="hero-languages">
@@ -153,33 +190,42 @@ export default function OverviewPage({
               </button>
             </div>
             <div className="topics-grid">
-              {modules.slice(0, 3).map((m, i) => (
+              {modules.slice(first, first + 3).map((m, i) => (
                 <ModuleCard
                   module={m}
-                  index={i}
+                  index={first + i}
                   problems={all}
-                  solved={solved}
+                  progress={loading ? undefined : progress[m.id]}
+                  current={m.id === current}
                   onSelect={onSelectTopic}
                   key={m.id}
                 />
               ))}
             </div>
           </section>
-          <section className="next-section">
+          <section className="next-section" aria-labelledby="next-step-title">
             <div className="section-heading">
               <div>
-                <h2>Um novo desafio espera por você</h2>
-                <p>Não precisa saber tudo. Só precisa começar.</p>
+                <h2 id="next-step-title">
+                  {finished ? 'Trilha concluída' : 'Seu próximo passo'}
+                  {recommendation && (
+                    <span className="subtle-badge">{kindLabels[recommendation.kind]}</span>
+                  )}
+                </h2>
+                <p>
+                  {loading
+                    ? 'Calculando o próximo passo…'
+                    : (recommendation?.reason ??
+                      'Você concluiu todas as etapas com desafios publicados. Novos desafios aparecem aqui.')}
+                </p>
               </div>
               <button className="text-button" onClick={() => onNavigate('problems')}>
                 Ver todos <ArrowRight size={16} />
               </button>
             </div>
-            <ProblemList
-              list={all.filter((p) => !solved.includes(p.id)).slice(0, 2)}
-              solved={solved}
-              onOpen={onOpenProblem}
-            />
+            {recommended && (
+              <ProblemList list={[recommended]} solved={solved} onOpen={onOpenProblem} />
+            )}
           </section>
         </div>
         <aside className="dashboard-aside">
@@ -211,17 +257,20 @@ export default function OverviewPage({
                 <Flag size={17} />
               </span>
               <span>
-                <strong>Seu primeiro objetivo</strong>
-                <small>Concluir 3 desafios de fundamentos</small>
+                <strong>{finished ? 'Trilha concluída' : 'Seu objetivo atual'}</strong>
+                <small>
+                  {goal && currentTitle
+                    ? `${goalText(goal.required, goal.total)} de ${currentTitle} · ${goal.completed}/${goal.required}`
+                    : finished
+                      ? 'Todas as etapas com desafios estão concluídas'
+                      : 'Calculando…'}
+                </small>
               </span>
             </div>
             <Progress
-              value={Math.min(
-                100,
-                (all.filter((p) => p.moduleId === 'foundations' && solved.includes(p.id)).length /
-                  3) *
-                  100,
-              )}
+              value={
+                goal ? Math.min(100, (goal.completed / goal.required) * 100) : finished ? 100 : 0
+              }
             />
           </section>
           <section className="card visual-preview">

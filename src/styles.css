@@ -787,6 +787,11 @@ main {
   font-size: 9px;
   color: #9ca0be;
 }
+.topic-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .topic-card h3 {
   font-size: 12px;
   margin-bottom: 9px;
@@ -2882,7 +2887,8 @@ main {
     display: block;
     margin: 0;
   }
-  .topics-grid .topic-number {
+  .topics-grid .topic-number,
+  .topics-grid .topic-card-meta {
     display: none;
   }
   .topics-grid .topic-card h3 {

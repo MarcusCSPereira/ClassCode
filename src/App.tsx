@@ -20,8 +20,10 @@ import {
 } from 'lucide-react';
 import { demoStore, repository } from './data';
 import { describeError, RepositoryError, type ProblemSummary } from './data/repository';
-import { problems } from './lib/catalog';
+import type { ActivityRow } from './data/repository';
+import { modules, problems } from './lib/catalog';
 import { downloadJson, visibleProblems } from './lib/domain';
+import { currentModule, moduleStatuses, recommendNext } from './lib/progression';
 import { pageNames, problemIdFromHash, readPage, type Page } from './lib/navigation';
 import type { Language, Module, Role } from './lib/types';
 import { useTheme } from './lib/useTheme';
@@ -88,10 +90,24 @@ export default function App() {
     const t = window.setTimeout(() => setNotice(''), 5000);
     return () => clearTimeout(t);
   }, [notice]);
+  // The trail reacts to attempts, hint views and reports; drafts and names do not affect it.
+  const [activity, setActivity] = useState<ActivityRow[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    repository.myActivity().then((rows) => {
+      if (!cancelled) setActivity(rows);
+    }, fail);
+    return () => {
+      cancelled = true;
+    };
+  }, [state.startedAt, state.hintViews, state.reports]);
   const all = visibleProblems(problems, state);
   const solved = Object.keys(state.reports);
   const solvedCount = all.filter((p) => solved.includes(p.id)).length;
-  const next = all.find((p) => !solved.includes(p.id)) ?? all[0];
+  const progress = moduleStatuses(modules, all, activity ?? []);
+  const current = activity && currentModule(modules, progress);
+  const recommendation = activity && recommendNext(modules, all, activity);
+  const recommended = recommendation && all.find((p) => p.id === recommendation.problemId);
   const teacher = state.role === 'teacher';
   const myClasses = state.classes.filter((c) => teacher || state.joinedClassIds.includes(c.id));
   function navigate(p: Page, problemId?: string) {
@@ -110,6 +126,11 @@ export default function App() {
   }
   function announce(message: string) {
     setNotice(message);
+  }
+  /** Opens the recommended problem; with the trail finished, shows the whole trail. */
+  function practice() {
+    if (recommended) openProblem(recommended);
+    else navigate('roadmap');
   }
   const draftKey = `${activeProblem.id}:${language}`;
 
@@ -180,7 +201,7 @@ export default function App() {
             <Sprout size={25} />
             <h3>Consistência é o caminho.</h3>
             <p>Um desafio por vez. Uma ideia nova todos os dias.</p>
-            <button onClick={() => openProblem(next)}>
+            <button onClick={practice} disabled={!activity}>
               Vamos praticar <ArrowRight size={15} />
             </button>
           </div>
@@ -246,7 +267,11 @@ export default function App() {
               teacher={teacher}
               problems={all}
               solved={solved}
-              next={next}
+              loading={!activity}
+              progress={progress}
+              current={current ?? null}
+              recommendation={recommendation ?? null}
+              onPractice={practice}
               onOpenProblem={openProblem}
               onNavigate={navigate}
               onPrimaryAction={() => setModal(teacher ? 'create-class' : 'join')}
@@ -254,7 +279,12 @@ export default function App() {
             />
           )}
           {page === 'roadmap' && (
-            <RoadmapPage problems={all} solved={solved} onSelectTopic={setTopic} />
+            <RoadmapPage
+              problems={all}
+              progress={activity ? progress : null}
+              current={current ?? null}
+              onSelectTopic={setTopic}
+            />
           )}
           {page === 'problems' && (
             <ProblemsPage
@@ -338,6 +368,7 @@ export default function App() {
           topic={topic}
           problems={all}
           solved={solved}
+          progress={activity ? progress[topic.id] : undefined}
           teacher={teacher}
           onOpenProblem={openProblem}
           onCreateProblem={() => {

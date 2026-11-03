@@ -6,8 +6,8 @@ Direção: um ambiente de aprendizagem calmo e universitário, com azul índigo,
 
 | Tela/fluxo | Função |
 | --- | --- |
-| Visão geral | Próximo desafio, progresso, etapas iniciais e acesso às turmas |
-| Minha trilha | 12 etapas, filtro por nível, pré-requisitos sugeridos e desafios por tópico |
+| Visão geral | Próximo passo recomendado com motivo, objetivo da etapa atual, progresso, três etapas a partir da atual e acesso às turmas |
+| Minha trilha | 12 etapas com estado (aguardando, disponível, em andamento, concluída, dominada), etapa atual destacada, filtro por nível e desafios por tópico |
 | Desafios | Busca por título/tópico, dificuldade, duração e estado de conclusão |
 | Espaço de prática | Objetivo, enunciado, entrada/saída, restrições, exemplos, dicas e rascunho |
 | Laboratório visual | Busca binária e bubble sort, passo anterior/próximo, reprodução, velocidade e pseudocódigo |
@@ -55,6 +55,7 @@ As fontes são carregadas do Google Fonts; os fallbacks mantêm a aplicação ut
 ## Estados e contratos visuais
 
 - Tópico sem questões: “Em preparação”, com currículo e pré-requisitos disponíveis.
+- Estado da etapa (CC-16): selo com badges existentes e sempre uma frase equivalente ("Recomendado após…", "1 de 2 para concluir"). No cartão compacto do celular (≤ 430 px) o selo some e a frase permanece. Enquanto a atividade carrega, "Calculando o próximo passo…" e botões de praticar desabilitados.
 - Dica bloqueada: tempo restante e botão desabilitado.
 - Busca sem resultado: estado vazio com orientação.
 - Código de turma inválido: validação no campo.

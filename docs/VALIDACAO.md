@@ -44,3 +44,12 @@ Refatoração sem mudança de fluxo: telas divididas em `src/pages/` e `src/moda
 - `npm run test:e2e`: **6 cenários em cada viewport (12 execuções)**. Os cinco anteriores passaram sem alterar asserts; o novo abre dados salvos pela versão 1 e confere rascunho, dica revelada e conclusão.
 - Os testes novos cobrem migração v1 → v2, armazenamento bloqueado, tentativa idempotente, dica antes e depois do prazo com leitura registrada uma vez, conclusão sem tentativa, edição que preserva o horário, reabertura, entrada por código, ações exclusivas do professor e atividade restrita aos desafios da turma.
 - Não executado: `bash tests/test-db.sh` (sem PostgreSQL local nesta máquina). O SQL não foi alterado.
+
+## Entrega 2 · CC-15 (02/11/2026)
+
+Motor de progressão em `src/lib/progression.ts`, sem alteração de interface.
+
+- `npm run check`: TypeScript, **38 testes de unidade** (17 novos em `progression.test.ts`) e build.
+- `npm run test:e2e`: 12 execuções, sem mudança em relação ao CC-00.
+- Os testes novos cobrem os sete casos mínimos da seção 5.4 de [ENTREGA-2.md](ENTREGA-2.md) e também: valores de autonomia, módulo com uma única conclusão, tentativa em módulo aguardando, reforço com a trilha concluída, atividade de desafio não publicado, pré-requisito sem questões, as três faixas de dificuldade adaptativa e o uso das duas conclusões mais recentes.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.

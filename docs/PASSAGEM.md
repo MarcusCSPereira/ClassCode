@@ -39,6 +39,52 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-15
+
+**Itens do backlog:** CC-15 (concluído)
+
+**Feito**
+
+- Motor de evolução em `src/lib/progression.ts`, só funções puras: `autonomy`, `hintsBeforeCompletion`, `moduleStatuses`, `currentModule` e `recommendNext`, com parâmetros em `PROGRESSION_RULES` (2 conclusões por módulo, Dominado com autonomia média ≥ 0,75, ajuda alta com autonomia ≤ 0,50).
+- Cada recomendação traz `kind` (`continue`, `advance` ou `reinforce`), o desafio, o módulo e o `reason` em português para mostrar ao aluno.
+- Nenhuma tela foi alterada: a interface continua com "próximo desafio = primeiro não concluído" e a meta fixa até o CC-16.
+
+**Estado verificado**
+
+- `npm run check`: TypeScript, 38 testes de unidade (17 novos) e build passaram.
+- `npm run test:e2e`: 12 de 12, como no CC-00.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local); o SQL não mudou.
+
+**Decisões tomadas**
+
+Registradas na seção 5 de [ENTREGA-2.md](ENTREGA-2.md#5-evolução-automática-e-gradual-modelo-v1), onde a proposta deixava margem:
+
+- Pré-requisito sem questões é transparente: valem os pré-requisitos dele.
+- Quem atinge o critério antes dos pré-requisitos (bloqueio suave) tem o módulo Concluído; tentativa em módulo Aguardando não o torna Em andamento.
+- A tendência de ajuda usa as duas conclusões mais recentes da trilha inteira.
+- O reforço só considera módulos Concluídos e não Dominados; sem candidata, `recommendNext` devolve `null` (trilha completa).
+- Atividade de desafios não publicados é ignorada.
+
+**Ficou de fora / limites conhecidos**
+
+- Os parâmetros ainda não foram validados com o professor da disciplina (D3).
+- "Continuar" escolhe qualquer desafio aberto e não concluído, mesmo aberto só para olhar. Como abrir já inicia a tentativa, se isso incomodar no teste de usabilidade, considerar exigir uma dica revelada, como no sinal "Travado" das métricas.
+
+**Próximo passo esperado**
+
+1. **CC-16 (frente Pedagógica):** levar o motor para a interface.
+   - Primeira ação: no `App.tsx`, carregar `repository.myActivity()` em um estado e recarregar sempre que a store mudar (no modo demo, o efeito pode depender de `state`).
+   - Passar `recommendNext(modules, all, activity)` para a visão geral e para o botão "Vamos praticar", no lugar de `next`.
+   - Na `ModuleCard`, mostrar o `status` e o `blockedBy` ("Recomendado após X").
+   - Trocar a meta fixa por `currentModule` com `required`/`completed`.
+   - E2E de aceite: concluir 2 desafios de Fundamentos muda a recomendação para Laços.
+2. **CC-17 (pode correr em paralelo):** `src/lib/metrics.ts` reaproveitando `hintsBeforeCompletion`, `autonomy` e `currentModule`. Para cada aluno, filtrar `activity` por `studentId` e chamar `moduleStatuses`.
+3. Continua valendo: decidir D1–D5 e enviar a branch ao GitHub para revisão (CC-00 e CC-15 ainda são commits locais).
+
+**Bloqueios**
+
+- Nenhum para CC-16 e CC-17. CC-01 segue dependendo de D1.
+
 ### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-00
 
 **Itens do backlog:** CC-00 (concluído)

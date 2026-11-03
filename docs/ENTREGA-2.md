@@ -72,6 +72,12 @@ Concluído libera os dependentes mesmo com autonomia baixa, para o aluno nunca f
 
 **Bloqueio suave:** a trilha continua navegável, como no design atual ("sem bloquear sua curiosidade"). Mudam a recomendação automática e o estado visível. Bloqueio rígido configurável por turma fica para depois do MVP.
 
+Regras de interpretação adotadas na implementação (CC-15):
+
+- **Ordem de avaliação:** Em preparação → Concluído/Dominado → Aguardando pré-requisito → Em andamento → Disponível. Quem atinge o critério de um módulo antes dos pré-requisitos, aproveitando o bloqueio suave, tem o módulo Concluído e libera os dependentes. Uma tentativa em módulo Aguardando não o torna Em andamento.
+- **Pré-requisito sem questões é transparente:** ele não tem o que concluir, então valem os pré-requisitos dele. Exemplo: se o professor publicar questões em Gulosos, que depende de Dois ponteiros (ainda sem questões), Gulosos fica liberado quando Complexidade, o pré-requisito de Dois ponteiros, estiver concluído. `blockedBy` lista os módulos que de fato faltam, já atravessando os vazios.
+- **Atividade de desafios não publicados** (removidos ou de outra turma) é ignorada.
+
 ### 5.3 Próximo passo recomendado
 
 As regras são avaliadas em ordem; vence a primeira que produzir um desafio. Toda recomendação devolve um `reason`, exibido ao aluno.
@@ -80,24 +86,46 @@ As regras são avaliadas em ordem; vence a primeira que produzir um desafio. Tod
 2. **Avançar na trilha:** no módulo liberado de menor posição que ainda não está Concluído, escolher uma questão não iniciada:
    - se as duas últimas conclusões tiveram autonomia ≥ 0,75, a de **maior** dificuldade disponível no módulo ("Você resolveu os últimos desafios quase sem dicas.");
    - se as duas últimas tiveram autonomia ≤ 0,50, a de **menor** dificuldade ("Vamos consolidar antes de subir o nível.");
-   - caso contrário, a próxima por dificuldade e ordem de cadastro.
-3. **Reforçar:** se todos os módulos com questões estão Concluídos, sugerir uma questão não iniciada do módulo Concluído com menor autonomia. Sem candidata, a trilha da turma está completa.
+   - caso contrário, a próxima por dificuldade e ordem de cadastro ("Você está pronto para começar <módulo>." se o módulo ainda não tem tentativa; "Próximo passo em <módulo>." se já tem).
+   - "As duas últimas" são as duas conclusões mais recentes em toda a trilha, não só no módulo atual. Com menos de duas conclusões, vale o caso padrão.
+3. **Reforçar:** se não houver módulo liberado em aberto, sugerir a questão não iniciada mais fácil do módulo Concluído (não Dominado) com menor autonomia ("Vale reforçar <módulo>: você concluiu a etapa com bastante ajuda das dicas."). Sem candidata, a função devolve `null`: a trilha da turma está completa.
 
 A meta fixa "Concluir 3 desafios de fundamentos" passa a ser derivada: "Conclua n de m desafios de <módulo atual>".
 
-### 5.4 Interface sugerida
+### 5.4 Interface implementada (CC-15)
+
+Em [`src/lib/progression.ts`](../src/lib/progression.ts). Todas as funções recebem a atividade de **um** aluno; para a turma (CC-17), chame uma vez por aluno.
 
 ```ts
-// src/lib/progression.ts
 export const PROGRESSION_RULES = { minCompletions: 2, masteryAutonomy: 0.75, lowAutonomy: 0.5 };
 export type ModuleStatus =
   'preparing' | 'waiting' | 'available' | 'in_progress' | 'completed' | 'mastered';
+export interface ModuleProgress {
+  status: ModuleStatus;
+  total: number; // questões publicadas no módulo
+  required: number; // min(minCompletions, total)
+  completed: number;
+  started: number;
+  autonomy: number | null; // média das conclusões
+  blockedBy: string[]; // só quando status === 'waiting'
+}
+export interface Recommendation {
+  kind: 'continue' | 'advance' | 'reinforce';
+  problemId: string;
+  moduleId: string;
+  reason: string;
+}
 export function autonomy(hintsBeforeCompletion: number): number;
+export function hintsBeforeCompletion(row: ActivityRow): number;
 export function moduleStatuses(
   modules: Module[],
   problems: ProblemSummary[],
   activity: ActivityRow[],
 ): Record<string, ModuleProgress>;
+export function currentModule(
+  modules: Module[],
+  progress: Record<string, ModuleProgress>,
+): string | null; // "módulo atual" para a meta e para as métricas
 export function recommendNext(
   modules: Module[],
   problems: ProblemSummary[],
@@ -105,7 +133,9 @@ export function recommendNext(
 ): Recommendation | null;
 ```
 
-Casos de teste mínimos:
+`modules` deve vir na ordem da trilha (a posição é a ordem do array) e `problems` na ordem de cadastro.
+
+Casos de teste mínimos, todos cobertos em [`src/lib/progression.test.ts`](../src/lib/progression.test.ts):
 
 - Aluno novo recebe o primeiro desafio de Primeiros algoritmos.
 - Duas conclusões sem dica em Fundamentos marcam Dominado e liberam Laços.
@@ -223,7 +253,7 @@ Situação dos pontos de atenção:
 
 CC-01 a CC-14 continuam definidos no [PLANO.md](PLANO.md#backlog-executável). Abaixo estão os itens novos; CC-08 passa a ser atendido por CC-17, CC-18 e CC-19.
 
-**Situação:** CC-00 concluído em 02/11 na branch `feat/entrega-2-mvp` (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
+**Situação:** CC-00 e CC-15 concluídos em 02/11 na branch `feat/entrega-2-mvp` (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
 
 | ID | Prior. | Frente | Entrega e critério de aceite | Depende de |
 | --- | --- | --- | --- | --- |

@@ -216,6 +216,40 @@ Testes SQL obrigatórios: o proprietário lê; outro professor, aluno da turma e
 
 Depois do MVP: "revelou assim que liberou" (dica aberta em até 30 s da liberação), tempo ativo no editor, evolução semanal e gráficos.
 
+### 6.4 Implementação (CC-17)
+
+Em [`src/lib/metrics.ts`](../src/lib/metrics.ts), com testes em [`src/lib/metrics.test.ts`](../src/lib/metrics.test.ts):
+
+```ts
+export const METRIC_RULES = {
+  inactiveDays: 7,
+  stuckHours: 48,
+  stuckProblems: 2,
+  dependentCompletions: 3,
+  dependentHints: 2.5,
+};
+export function classroomMetrics(
+  modules: Module[],
+  problems: ProblemSummary[], // questões publicadas da turma, na ordem de cadastro
+  activity: ClassroomActivity, // o que repository.classroomActivity() devolve
+  now: number, // referência para "ativo", "inativo" e "travado"
+): ClassroomMetrics; // students, problems, mostHelpNeeded, moduleDistribution, map, enrolled, activeLastWeek
+export function describeCell(cell: MapCell): string; // "Viu 2 dicas", "Concluiu sem dica"...
+export function studentsCsv(students: StudentMetrics[], modules: Module[], options?: { timeZone?: string }): string;
+```
+
+Interpretações adotadas onde as seções 6.1 e 6.2 deixavam margem:
+
+- **Dicas que contam como ajuda:** as abertas até a conclusão, ou todas, enquanto o desafio não foi concluído. É a mesma regra da autonomia da trilha.
+- **Funil de dicas:** conta por número da dica, porque o aluno pode abrir a 3ª sem abrir a 2ª. O denominador é quem abriu a questão.
+- **Questões que mais exigiram ajuda:** questões que ninguém abriu ficam fora do ranking.
+- **Travado:** a tentativa foi aberta há mais de 48 h, tem ao menos uma dica e não tem conclusão.
+- **Inativo** vale só para quem já abriu algum desafio; quem nunca abriu recebe "Ainda não começou".
+- **Ativo nos últimos 7 dias:** última atividade há menos de 7 dias.
+- **Etapa atual:** vem de `currentModule`; sem etapa em aberto (trilha concluída ou turma sem questões), aparece como "Sem etapa em aberto".
+- **Atividade fora da turma:** de alunos que não estão mais matriculados ou de questões não publicadas, é ignorada.
+- **CSV para planilhas em português:** separador `;`, vírgula decimal, BOM UTF-8 e quebras CRLF. Células que começam com `=`, `+`, `-` ou `@` recebem `'` na frente para não virarem fórmula, porque o nome é digitado pelo aluno. Os títulos das colunas dizem "Conclusões autodeclaradas" e "Sinais de atenção (não são nota)".
+
 ## 7. Contrato de repositório
 
 A UI depende de uma interface implementada pelo modo demo e, a partir de CC-03, pelo modo remoto. Nenhuma tela chama `localStorage` ou Supabase diretamente. **Implementado no CC-00** em [`src/data/repository.ts`](../src/data/repository.ts):
@@ -253,7 +287,7 @@ Situação dos pontos de atenção:
 
 CC-01 a CC-14 continuam definidos no [PLANO.md](PLANO.md#backlog-executável). Abaixo estão os itens novos; CC-08 passa a ser atendido por CC-17, CC-18 e CC-19.
 
-**Situação:** CC-00, CC-15 e CC-16 concluídos em 02/11 na branch `feat/entrega-2-mvp`; o CC-16 funciona no modo demo e passa a valer para usuários reais com CC-02 a CC-04 (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
+**Situação:** CC-00, CC-15, CC-16 e CC-17 concluídos em 02/11 na branch `feat/entrega-2-mvp`; o CC-16 funciona no modo demo e passa a valer para usuários reais com CC-02 a CC-04 (detalhes em [PASSAGEM.md](PASSAGEM.md)). Os demais itens estão abertos.
 
 | ID | Prior. | Frente | Entrega e critério de aceite | Depende de |
 | --- | --- | --- | --- | --- |

@@ -62,3 +62,12 @@ Trilha adaptativa na interface do aluno (modo demo).
 - `npm run test:e2e`: **8 cenários em cada viewport (16 execuções)**. Novos: concluir dois desafios de Fundamentos muda o próximo passo para Laços, marca Fundamentos como Dominado e mostra "Recomendado após Laços & simulação" em Vetores; liberar uma dica não registra leitura, só o clique registra.
 - Revisão visual: desktop 1440 px (claro e escuro), celular 375 px (sem rolagem horizontal), modal da etapa e estado de trilha concluída. Corrigida a sobreposição do selo de estado no cartão compacto do celular.
 - Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.
+
+## Entrega 2 · CC-17 (02/11/2026)
+
+Cálculo das métricas do professor em `src/lib/metrics.ts`, sem alteração de interface.
+
+- `npm run check`: TypeScript, **49 testes de unidade** (11 novos em `metrics.test.ts`) e build.
+- `npm run test:e2e`: 16 execuções, sem mudança em relação ao CC-16.
+- Os testes usam uma turma fictícia com um aluno por situação da seção 6 de [ENTREGA-2.md](ENTREGA-2.md): ativo, sem tentativas, inativo há 9 dias, travado e dependente de dicas. Eles cobrem métricas por aluno e por questão, funil de dicas, ranking de ajuda, distribuição por etapa, mapa aluno × questão, dica aberta depois da conclusão, atividade fora da turma, turma vazia e o CSV (formato pt-BR, escape de `;` e aspas, proteção contra fórmulas).
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.

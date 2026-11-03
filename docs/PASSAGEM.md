@@ -39,6 +39,57 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-17
+
+**Itens do backlog:** CC-17 (concluído)
+
+**Feito**
+
+- `src/lib/metrics.ts`, só funções puras. `classroomMetrics(modules, problems, activity, now)` recebe o que `repository.classroomActivity()` devolve e calcula:
+  - por aluno: desafios abertos, conclusões, taxa de conclusão, dicas por conclusão, autonomia (% sem dica), tempo mediano até registrar, última atividade, etapa atual e sinais de atenção com o motivo;
+  - por questão: abertos, conclusões, taxa, funil das 3 dicas e tempo mediano;
+  - por turma: matriculados, ativos nos últimos 7 dias, ranking das "questões que mais exigiram ajuda", distribuição por etapa e mapa aluno × questão.
+- `describeCell` escreve as células do mapa ("Viu 2 dicas", "Concluiu sem dica").
+- `studentsCsv` gera a tabela por aluno pronta para Excel/Sheets em português.
+- Limiares em `METRIC_RULES` (7 dias, 48 h, 2 desafios, 3 conclusões, 2,5 dicas).
+- Nenhuma tela foi alterada; o painel é o CC-19.
+
+**Estado verificado**
+
+- `npm run check`: TypeScript, 49 testes de unidade (11 novos) e build passaram.
+- `npm run test:e2e`: 16 de 16, como no CC-16.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local); o SQL não mudou.
+
+**Decisões tomadas**
+
+Registradas na seção 6.4 de [ENTREGA-2.md](ENTREGA-2.md#64-implementação-cc-17). As principais:
+
+- "Travado" conta o tempo desde que o desafio foi aberto.
+- O funil conta por número da dica; dica aberta depois da conclusão não conta como ajuda.
+- Quem nunca abriu um desafio recebe só "Ainda não começou", e não "Inativo".
+- O CSV usa `;`, vírgula decimal e BOM, e neutraliza fórmulas em nomes digitados por alunos.
+
+**Ficou de fora / limites conhecidos**
+
+- Os limiares ainda não foram calibrados com o professor (D4).
+- No modo demo a turma tem no máximo um aluno, a identidade local. Por isso o painel só fica demonstrável com o CC-21 (turma fictícia) ou com usuários reais.
+
+**Próximo passo esperado**
+
+1. **CC-19 (frente Pedagógica):** painel do professor em `src/pages/TeacherPage.tsx`.
+   - Primeira ação: um seletor da turma; para a escolhida, chamar `repository.classroomActivity(id)` e `classroomMetrics(modules, questõesDaTurma, atividade, Date.now())`.
+   - Questões da turma: no demo são as do catálogo para `demo-class` e as com `authorClassId` igual ao id da turma, a mesma regra da `ClassesPage`. Vale incluir um filtro por turma em `listProblems` antes do CC-03.
+   - Mostrar o resumo, a tabela por aluno com os sinais, as questões que mais exigiram ajuda e o mapa aluno × questão.
+   - Botão de CSV: `studentsCsv` + download como `text/csv;charset=utf-8`. Hoje `domain.ts` só tem `downloadJson`; generalizar.
+   - Estados de carregamento, vazio e erro.
+   - Texto fixo: "Conclusões são autodeclaradas; métricas não são nota".
+2. **CC-21**, logo depois ou junto: turma fictícia identificada como tal, para o painel ter conteúdo na apresentação.
+3. Continua valendo: decidir D1–D5 e enviar a branch ao GitHub para revisão (CC-00, CC-15, CC-16 e CC-17 ainda são commits locais).
+
+**Bloqueios**
+
+- Nenhum para CC-19 e CC-21. CC-01 e CC-18 seguem dependendo de D1.
+
 ### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-16
 
 **Itens do backlog:** CC-16 (concluído no modo demo)

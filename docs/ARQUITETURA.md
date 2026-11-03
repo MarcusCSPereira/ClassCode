@@ -75,6 +75,7 @@ Isso é um procedimento de operação inicial, não um endpoint a expor no clien
 - RPC de leitura/rotação de convite exclusiva do proprietário; atualmente o código volta na criação.
 - Leitura de nomes dos alunos para o proprietário. `profiles` lê apenas o próprio perfil nesta base; estender com teste de isolamento, não com política pública.
 - Relatório de uso de dicas para o proprietário; `private.hint_views` continua inacessível ao navegador.
+- Os dois itens anteriores têm proposta de contrato nas RPCs `classroom_activity` e `my_activity` (CC-18, [ENTREGA-2.md](ENTREGA-2.md#63-fonte-de-dados-e-cálculo)).
 - Persistência remota de rascunhos, revisão docente, arquivo de turmas e versionamento de questões.
 - Limites de payload, quotas e rate limiting em endpoints/convites; convites expiráveis e revogáveis.
 - Homologar grants, migrations e funções no Supabase real; o teste local usa Auth emulado.

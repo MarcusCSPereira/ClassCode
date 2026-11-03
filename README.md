@@ -2,7 +2,7 @@
 
 **Um passo. Um algoritmo.** Plataforma educativa para aprender algoritmos com trilhas progressivas, dicas no tempo certo e acompanhamento por professores.
 
-[Demonstração](https://marcuscspereira.github.io/ClassCode/) · [Plano de desenvolvimento](docs/PLANO.md) · [Arquitetura](docs/ARQUITETURA.md) · [Design](docs/DESIGN.md) · [Pesquisa](docs/PESQUISA.md)
+[Demonstração](https://marcuscspereira.github.io/ClassCode/) · [Plano de desenvolvimento](docs/PLANO.md) · [Entrega 2](docs/ENTREGA-2.md) · [Registro de passagem](docs/PASSAGEM.md) · [Arquitetura](docs/ARQUITETURA.md) · [Design](docs/DESIGN.md) · [Pesquisa](docs/PESQUISA.md)
 
 ![Dashboard do ClassCode](docs/images/dashboard.jpg)
 
@@ -92,6 +92,6 @@ A integração futura com Supabase utiliza apenas a URL e a chave publicável no
 
 ## Como o time continua
 
-Comece por [CONTRIBUTING.md](CONTRIBUTING.md) e execute os itens do [backlog](docs/PLANO.md#backlog-executável), em ordem de dependência. A prioridade é transformar o fluxo de demonstração em um fluxo multiusuário persistente. O judge integrado é a extensão seguinte.
+Comece por [CONTRIBUTING.md](CONTRIBUTING.md) e pela entrada mais recente do [registro de passagem](docs/PASSAGEM.md), que diz o próximo passo esperado. Execute os itens do [backlog](docs/PLANO.md#backlog-executável) em ordem de dependência. A [Entrega 2](docs/ENTREGA-2.md) transforma a demonstração em um fluxo multiusuário persistente e acrescenta a trilha adaptativa e as métricas do professor. O judge integrado é a extensão seguinte.
 
 Licença MIT para o código e o conteúdo autoral deste repositório. Referências, marcas e enunciados de terceiros mantêm suas próprias condições de uso.

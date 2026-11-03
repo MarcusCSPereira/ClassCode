@@ -1,0 +1,296 @@
+# Entrega 2: MVP conectado, métricas e evolução gradual
+
+Branch: `feat/entrega-2-mvp` · Proposta escrita em 02/11/2026 · Janela: 03–11/11/2026, com integração em 12/11 e apresentação em 15/11, conforme o [PLANO.md](PLANO.md).
+
+Este documento é a **proposta** da próxima entrega. Parte do que existe na `main` (commit `2de1556`), compara com a visão do produto e define backlog, contratos e critérios de aceite. **Nada aqui está implementado ainda.** O que cada pessoa já fez fica registrado em [PASSAGEM.md](PASSAGEM.md).
+
+## 1. Visão do produto
+
+O aluno resolve problemas com **dicas graduais** e **evolui sozinho** por uma trilha que se adapta ao seu desempenho. O professor **extrai métricas** do uso real da plataforma para decidir o que reforçar em aula.
+
+## 2. Diagnóstico: o que está pronto e o que falta
+
+| Pilar | Pronto na base | Lacuna para o MVP |
+| --- | --- | --- |
+| Resolução com dicas graduais | Espaço de prática, padrão de questão, editor Python/Java/C++, 3 dicas em 3/7/12 min, judge externo, conclusão autodeclarada | Dicas e relógio são locais e manipuláveis; questões vêm do bundle; nada persiste entre dispositivos |
+| Métricas para o professor | Painel com 3 contadores do próprio navegador: turmas, desafios criados e conclusões locais | **Nenhuma métrica por aluno, por questão ou por turma.** O banco já registra início, dicas vistas e conclusões, mas o professor não consegue ler nomes nem `hint_views` |
+| Evolução automática e gradual | 12 etapas com pré-requisitos sugeridos; "próximo desafio" é o primeiro não concluído da lista; meta fixa "3 desafios de fundamentos" | **Nenhum modelo de domínio, recomendação ou desbloqueio.** A trilha não reage ao desempenho nem ao uso de dicas |
+| Plataforma | Migration com RLS e 5 RPCs testadas em PostgreSQL com Auth emulado; CI; GitHub Pages | Supabase real não criado; frontend sem Auth e sem repositório remoto; `App.tsx` concentra todas as telas em 1.464 linhas |
+
+Verificação feita para este diagnóstico (02/11): `npm ci` e `npm run check` passaram, com TypeScript, 10 testes de domínio e build. E2E e testes SQL não foram reexecutados; o último resultado registrado está em [VALIDACAO.md](VALIDACAO.md).
+
+**Conclusão:** o backlog atual (CC-01 a CC-14) cobre bem a plataforma, mas resume as métricas em um único item (CC-08) e não cobre a evolução automática. Esses dois pilares são o diferencial pedagógico do projeto e ganham itens próprios, com as regras escritas antes do código.
+
+## 3. Propostas de escopo
+
+| Proposta | Como funciona | A favor | Contra |
+| --- | --- | --- | --- |
+| A. Plataforma primeiro | Seguir CC-01 → CC-10 em sequência; métricas e evolução no fim | Menor risco de segurança | O diferencial pedagógico chega por último e é o primeiro a ser cortado |
+| B. Pedagogia primeiro | Construir trilha adaptativa e painel de métricas sobre o modo demo; conectar o backend depois | Mostra valor cedo | Não cumpre o critério de usuários reais; repete o risco "UI pronta sem autorização" apontado no PLANO |
+| **C. Duas frentes sobre um contrato (recomendada)** | A frente Plataforma faz Auth, RPCs e repositório remoto. A frente Pedagógica faz progressão e métricas como funções puras testadas, com UI ligada a uma interface de repositório que já funciona no modo demo. As frentes convergem em 10–11/11 | Paralelismo com poucos conflitos de arquivo; regras pedagógicas testáveis sem rede; o modo demo continua como contingência honesta | Exige o contrato da seção 7 e a divisão do `App.tsx` antes de começar |
+
+A proposta C depende de começar por **CC-00**: dividir o `App.tsx` em páginas e introduzir a interface de repositório. Sem isso, as duas frentes editam o mesmo arquivo o tempo todo.
+
+## 4. Fluxo que a Entrega 2 precisa demonstrar
+
+```mermaid
+flowchart LR
+  P1[Professor entra] --> P2[Cria turma] --> P3[Importa trilha base] --> P4[Publica questão própria]
+  A1[Aluno entra em outro navegador] --> A2[Usa o código da turma] --> A3[Vê o próximo passo recomendado e o motivo]
+  A3 --> A4[Resolve com dicas liberadas pelo servidor] --> A5[Registra conclusão] --> A6[Trilha recalcula módulo e dificuldade]
+  A6 --> A3
+  A5 --> M[Painel do professor com métricas da turma]
+  P4 --> A3
+```
+
+## 5. Evolução automática e gradual: modelo v1
+
+Regras determinísticas e explicáveis, sem IA: aluno e professor conseguem entender por que uma recomendação apareceu. Implementação em `src/lib/progression.ts`, com funções puras, sem React e sem rede.
+
+### 5.1 Autonomia de uma conclusão
+
+Cada conclusão recebe uma nota de autonomia conforme as dicas reveladas **antes** do registro de conclusão:
+
+| Dicas reveladas | 0 | 1 | 2 | 3 |
+| --- | --- | --- | --- | --- |
+| Autonomia | 1,00 | 0,75 | 0,50 | 0,25 |
+
+Dicas abertas depois de concluir não reduzem a autonomia, para o aluno poder revisar. No modo demo, enquanto não houver horário de leitura das dicas, todas as reveladas contam.
+
+### 5.2 Estados de um módulo, por aluno
+
+| Estado | Regra | O que a UI mostra |
+| --- | --- | --- |
+| Em preparação | A turma não tem questões publicadas no módulo | "Em preparação" (já existe) |
+| Aguardando pré-requisito | Algum pré-requisito ainda não está Concluído | "Recomendado após X"; continua acessível |
+| Disponível | Pré-requisitos concluídos e nenhuma tentativa no módulo | Destaque de "pronto para começar" |
+| Em andamento | Há tentativa, mas o critério de conclusão não foi atingido | Progresso `n/meta` |
+| Concluído | Conclusões ≥ `min(2, questões publicadas no módulo)` | Libera os módulos dependentes |
+| Dominado | Concluído **e** autonomia média ≥ 0,75 | Selo de domínio |
+
+Concluído libera os dependentes mesmo com autonomia baixa, para o aluno nunca ficar travado. Nesse caso a recomendação sugere reforço e o professor vê o sinal. Os parâmetros ficam em uma constante única, `PROGRESSION_RULES`, para ajuste depois da conversa com o professor da disciplina.
+
+**Bloqueio suave:** a trilha continua navegável, como no design atual ("sem bloquear sua curiosidade"). Mudam a recomendação automática e o estado visível. Bloqueio rígido configurável por turma fica para depois do MVP.
+
+### 5.3 Próximo passo recomendado
+
+As regras são avaliadas em ordem; vence a primeira que produzir um desafio. Toda recomendação devolve um `reason`, exibido ao aluno.
+
+1. **Continuar:** o desafio iniciado e não concluído mais recente, em um módulo que não esteja Aguardando pré-requisito. Motivo: "Você começou este desafio e ainda não registrou a conclusão."
+2. **Avançar na trilha:** no módulo liberado de menor posição que ainda não está Concluído, escolher uma questão não iniciada:
+   - se as duas últimas conclusões tiveram autonomia ≥ 0,75, a de **maior** dificuldade disponível no módulo ("Você resolveu os últimos desafios quase sem dicas.");
+   - se as duas últimas tiveram autonomia ≤ 0,50, a de **menor** dificuldade ("Vamos consolidar antes de subir o nível.");
+   - caso contrário, a próxima por dificuldade e ordem de cadastro.
+3. **Reforçar:** se todos os módulos com questões estão Concluídos, sugerir uma questão não iniciada do módulo Concluído com menor autonomia. Sem candidata, a trilha da turma está completa.
+
+A meta fixa "Concluir 3 desafios de fundamentos" passa a ser derivada: "Conclua n de m desafios de <módulo atual>".
+
+### 5.4 Interface sugerida
+
+```ts
+// src/lib/progression.ts
+export const PROGRESSION_RULES = { minCompletions: 2, masteryAutonomy: 0.75, lowAutonomy: 0.5 };
+export type ModuleStatus =
+  'preparing' | 'waiting' | 'available' | 'in_progress' | 'completed' | 'mastered';
+export function autonomy(hintsBeforeCompletion: number): number;
+export function moduleStatuses(
+  modules: Module[],
+  problems: ProblemSummary[],
+  activity: ActivityRow[],
+): Record<string, ModuleProgress>;
+export function recommendNext(
+  modules: Module[],
+  problems: ProblemSummary[],
+  activity: ActivityRow[],
+): Recommendation | null;
+```
+
+Casos de teste mínimos:
+
+- Aluno novo recebe o primeiro desafio de Primeiros algoritmos.
+- Duas conclusões sem dica em Fundamentos marcam Dominado e liberam Laços.
+- Duas conclusões com 3 dicas liberam Laços, não marcam Dominado, e a recomendação seguinte é a de menor dificuldade.
+- Desafio em andamento tem prioridade sobre um novo.
+- Módulo sem questões nunca é recomendado.
+- Dependência múltipla: Grafos só fica disponível com Estruturas **e** Recursão concluídos.
+- Dica aberta depois da conclusão não reduz a autonomia.
+
+## 6. Métricas do professor: catálogo v1
+
+As métricas servem ao **acompanhamento pedagógico**, não a nota automática. As conclusões continuam autodeclaradas e a interface diz isso. Só o professor proprietário da turma vê os dados. Nenhum código-fonte de aluno é exposto nesta entrega.
+
+### 6.1 Definições
+
+Abrir um desafio inicia a tentativa (regra do servidor em `start_attempt`), por isso "Abertos" inclui navegação exploratória.
+
+Por aluno:
+
+| Métrica | Definição | Fonte |
+| --- | --- | --- |
+| Abertos | Desafios com tentativa | `attempts` |
+| Conclusões declaradas | Desafios com registro de conclusão | `progress_reports` |
+| Taxa de conclusão | Conclusões / abertos | — |
+| Dicas por conclusão | Média de dicas reveladas antes da conclusão | `hint_views` e `progress_reports` |
+| Autonomia | % de conclusões sem nenhuma dica | idem |
+| Tempo até registrar | Mediana de `reported_at − started_at`; tempo de parede, inclui pausas | `attempts` e `progress_reports` |
+| Última atividade | Maior horário entre início, dica e conclusão | todas |
+| Módulo atual | Calculado por `progression.ts` | — |
+
+Por questão: alunos que abriram, que concluíram, taxa de conclusão, funil de dicas (% que revelou a 1ª, a 2ª e a 3ª) e tempo mediano até registrar. O ranking **"Questões que mais exigiram ajuda"** ordena pela % que revelou a 3ª dica e, em empate, pela menor taxa de conclusão.
+
+Por turma: matriculados, ativos nos últimos 7 dias, distribuição dos alunos por módulo atual e **mapa aluno × questão** com os estados: não abriu · em andamento · viu k dicas · concluiu sem dica · concluiu com k dicas.
+
+### 6.2 Sinais de atenção
+
+São sinais, não rótulos de desempenho. Aparecem como texto com o motivo.
+
+| Sinal | Regra inicial |
+| --- | --- |
+| Ainda não começou | Matriculado sem tentativas |
+| Inativo | Sem atividade há 7 dias ou mais |
+| Travado | 2 ou mais desafios com dica revelada e sem conclusão há mais de 48 h |
+| Muito dependente de dicas | 3 ou mais conclusões e média ≥ 2,5 dicas por conclusão |
+
+"Travado" exige dica revelada para não confundir esforço real com navegação exploratória. Os limiares ficam em `METRIC_RULES` para calibração com o professor.
+
+### 6.3 Fonte de dados e cálculo
+
+O schema atual **já registra tudo o que o catálogo v1 precisa**. Falta expor os dados ao professor de forma segura e agregá-los. Decisão proposta: o banco devolve linhas de atividade e a agregação acontece em `src/lib/metrics.ts`, função pura e testada, compartilhada entre o modo demo e o modo remoto.
+
+```ts
+export interface ActivityRow {
+  studentId: string;
+  problemId: string;
+  startedAt: string; // ISO, horário do servidor
+  hintViews: { ordinal: 1 | 2 | 3; viewedAt: string }[];
+  reportedAt?: string;
+  verification?: 'self_reported';
+}
+export interface RosterEntry {
+  studentId: string;
+  displayName: string;
+  joinedAt: string;
+}
+```
+
+RPCs novas, em uma **migration nova**. Nunca alterar `202611020001_core.sql`, que pode já ter sido aplicada em algum ambiente.
+
+| RPC | Quem pode chamar | Retorno |
+| --- | --- | --- |
+| `classroom_activity(cid uuid)` | Apenas o proprietário da turma | `{ roster: RosterEntry[], activity: ActivityRow[] }` dos alunos matriculados |
+| `my_activity()` | Aluno autenticado | `ActivityRow[]` do próprio usuário, para a trilha adaptativa e para saber quais dicas já revelou |
+
+Testes SQL obrigatórios: o proprietário lê; outro professor, aluno da turma e aluno de fora recebem negação; `anon` não executa; `my_activity` nunca devolve outro aluno.
+
+**Cuidado de implementação:** `get_hint` registra a leitura. A UI só deve chamá-la quando o aluno clicar em "Revelar dica", nunca automaticamente quando a dica libera; caso contrário, a métrica de dicas fica errada. Depois de recarregar a página, as dicas já reveladas são buscadas de novo (a RPC é idempotente) a partir de `my_activity`.
+
+Depois do MVP: "revelou assim que liberou" (dica aberta em até 30 s da liberação), tempo ativo no editor, evolução semanal e gráficos.
+
+## 7. Contrato de repositório
+
+A UI passa a depender de uma interface implementada pelo modo demo e pelo modo remoto. Nenhuma tela chama `localStorage` ou Supabase diretamente.
+
+```ts
+// src/data/repository.ts
+export interface ClassCodeRepository {
+  readonly mode: 'demo' | 'remote';
+  listClassrooms(): Promise<Classroom[]>;
+  createClassroom(name: string, term: string): Promise<{ id: string; code: string }>;
+  joinClassroom(code: string): Promise<string>;
+  listProblems(): Promise<ProblemSummary[]>; // sem o texto das dicas
+  startAttempt(problemId: string): Promise<string>; // started_at do servidor
+  revealHint(problemId: string, ordinal: 1 | 2 | 3): Promise<string>;
+  reportProgress(problemId: string, evidence: string): Promise<void>;
+  myActivity(): Promise<ActivityRow[]>;
+  classroomActivity(
+    classroomId: string,
+  ): Promise<{ roster: RosterEntry[]; activity: ActivityRow[] }>;
+  // Auth, publicação de questões e importação da trilha base entram em CC-02, CC-05 e CC-20.
+}
+```
+
+Pontos de atenção:
+
+- `Problem.hints` hoje é obrigatório e carrega o texto. Separar em `ProblemSummary` (enunciado e horários de liberação) e texto obtido por `revealHint`.
+- No modo remoto, o catálogo com dicas não pode entrar no bundle: importá-lo somente dentro do `DemoRepository`, com `import()` dinâmico.
+- `DemoState` precisa de uma versão 2 com horário de leitura das dicas e de conclusão, migrando a v1 sem perder rascunhos.
+- Mapeamentos de campos e dificuldade seguem a seção "Migração do frontend" de [ARQUITETURA.md](ARQUITETURA.md).
+
+## 8. Backlog da Entrega 2
+
+CC-01 a CC-14 continuam definidos no [PLANO.md](PLANO.md#backlog-executável). Abaixo estão os itens novos; CC-08 passa a ser atendido por CC-17, CC-18 e CC-19.
+
+| ID | Prior. | Frente | Entrega e critério de aceite | Depende de |
+| --- | --- | --- | --- | --- |
+| CC-00 | P0 | Ambas | Dividir `App.tsx` em `src/pages/*` e componentes; criar `ClassCodeRepository` e `DemoRepository` com o comportamento atual. **Sem mudança visível:** o E2E atual passa sem alterar asserts | — |
+| CC-15 | P0 | Pedagógica | `progression.ts` com estados de módulo, autonomia e recomendação da seção 5; testes cobrindo os casos listados | — |
+| CC-16 | P0 | Pedagógica | Trilha e visão geral usam CC-15: estado de cada módulo, próximo passo com motivo e meta derivada. E2E: concluir 2 desafios de Fundamentos muda a recomendação para Laços | CC-00, CC-15 |
+| CC-17 | P0 | Pedagógica | `metrics.ts` com o catálogo e os sinais da seção 6; testes com turma fictícia (sem tentativas, inativo, travado, dependente de dicas) | — |
+| CC-18 | P0 | Plataforma | Migration nova com `classroom_activity` e `my_activity`; testes SQL de permitir e negar | CC-01 |
+| CC-19 | P0 | Pedagógica | Painel do professor: resumo da turma, tabela por aluno com sinais, questões que mais exigiram ajuda, mapa aluno × questão e exportação CSV; estados de carregamento, vazio e erro. Funciona com `DemoRepository` e depois com o remoto | CC-00, CC-17; CC-18 no remoto |
+| CC-20 | P0 | Plataforma | Trilha base no servidor: modelos das 7 questões, com dicas, em tabela privada do seed; RPC `import_base_trail(cid)` idempotente e só do proprietário; botão "Importar trilha base" ao criar turma | CC-05 |
+| CC-21 | P1 | Pedagógica | Turma fictícia no modo demo, com 6–8 alunos e atividade gerada de forma determinística, identificada na UI como dados fictícios, para demonstrar o painel sem depender da rede | CC-19 |
+
+```mermaid
+flowchart TD
+  CC00[CC-00 dividir App e criar repositório] --> CC16
+  CC00 --> CC19
+  CC15[CC-15 progressão] --> CC16[CC-16 trilha adaptativa]
+  CC17[CC-17 métricas] --> CC19[CC-19 painel do professor]
+  CC01[CC-01 Supabase] --> CC02[CC-02 Auth] --> CC03[CC-03 repositório remoto] --> CC04[CC-04 turmas reais]
+  CC04 --> CC05[CC-05 questões] --> CC06[CC-06 tentativas e dicas] --> CC07[CC-07 evidência]
+  CC01 --> CC18[CC-18 RPCs de atividade]
+  CC05 --> CC20[CC-20 trilha base]
+  CC18 --> CC19
+  CC19 --> CC21[CC-21 turma fictícia]
+  CC07 --> CC09[CC-09 testes de isolamento reais]
+  CC16 --> CC09
+  CC19 --> CC09
+  CC20 --> CC09
+```
+
+## 9. Cronograma da entrega
+
+| Data | Frente Plataforma | Frente Pedagógica |
+| --- | --- | --- |
+| 03/11 | Decisões da seção 10; CC-00 em conjunto, em um PR curto mesclado antes de tudo | CC-00 em conjunto |
+| 04–06/11 | CC-01, CC-02, CC-03, CC-04 | CC-15 e CC-17: funções puras e testes |
+| 07–09/11 | CC-05, CC-20, CC-06, CC-07, CC-18 | CC-16 e CC-19 sobre o `DemoRepository`; CC-21 se houver folga |
+| 10–11/11 | CC-09 no Supabase real | Ligar CC-16 e CC-19 ao repositório remoto |
+| 12/11 | Integração e regra de corte do PLANO | Integração e regra de corte do PLANO |
+
+**Regra de corte desta entrega:** se CC-04 não estiver integrado em 09/11, a frente Pedagógica passa a ajudar a Plataforma, e as telas novas são apresentadas no modo demo, identificadas como tal. O judge integrado (CC-13 e CC-14) continua fora. Métricas nunca exibem dados simulados como se fossem reais.
+
+## 10. Decisões pendentes do time
+
+| # | Decisão | Opções | Recomendação |
+| --- | --- | --- | --- |
+| D1 | Ambiente do Supabase | Projeto na nuvem, na conta de alguém do time · stack local com Supabase CLI e Docker | Nuvem de desenvolvimento, porque o critério do MVP exige dispositivos diferentes. CLI local é opcional para quem tiver Docker |
+| D2 | Bloqueio da trilha | Suave: recomenda, tudo acessível · rígido | Suave no MVP |
+| D3 | Parâmetros da evolução | 2 conclusões por módulo; autonomia ≥ 0,75 para Dominado | Adotar e validar com o professor da disciplina |
+| D4 | Limiares dos sinais | 7 dias · 48 h · 2,5 dicas | Adotar e calibrar no teste de usabilidade de 13/11 |
+| D5 | Responsáveis | Quem assume cada frente | Ao menos uma pessoa por frente; quem é de uma frente revisa os PRs da outra |
+
+Registre cada decisão tomada em [PASSAGEM.md](PASSAGEM.md) e atualize esta tabela.
+
+## 11. Critérios de aceite da Entrega 2
+
+- [ ] Professor e aluno reais, em navegadores diferentes, completam o fluxo da seção 4.
+- [ ] A recomendação muda sozinha depois que o aluno conclui um módulo, e a tela explica o motivo.
+- [ ] Dicas reveladas reduzem a autonomia; as dicas vêm do servidor e só quando o aluno pede.
+- [ ] O professor vê métricas apenas da própria turma; outro professor e alunos recebem negação nos testes SQL e via API.
+- [ ] O painel deixa claro que conclusões são autodeclaradas e que métricas não são nota.
+- [ ] A exportação CSV contém as colunas da tabela por aluno.
+- [ ] `npm run check`, E2E em desktop e celular e `bash tests/test-db.sh` passam.
+- [ ] [PASSAGEM.md](PASSAGEM.md) recebe uma entrada a cada PR.
+
+## 12. Riscos específicos
+
+| Risco | Resposta |
+| --- | --- |
+| Conflitos em `App.tsx` entre as frentes | CC-00 primeiro, em um PR curto |
+| Regras de evolução discutidas sem fim | Parâmetros em constante única; adotar a v1 e calibrar com dados do teste de usabilidade |
+| Métrica de dicas distorcida | Revelar só por clique; E2E garante que a liberação, sozinha, não registra leitura |
+| Tempo até registrar inflado por pausas | Mostrar mediana e nomear como "tempo até registrar"; tempo ativo fica para depois |
+| Professor ler métrica como nota | Texto explícito no painel e no CSV; sinais descrevem fatos, sem julgamento |
+| Supabase não criado a tempo | D1 decidido em 03/11; a frente Pedagógica não depende dele até 10/11 |

@@ -82,13 +82,27 @@ export function visibleProblems(catalog: Problem[], state: DemoState): Problem[]
     ),
   ];
 }
-export function downloadJson(data: unknown, filename: string) {
-  const url = URL.createObjectURL(
-    new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
-  );
+/** Catalog problems have no class and belong to the seeded demo class. */
+export function belongsToClassroom(p: { authorClassId?: string }, classroomId: string) {
+  return (p.authorClassId ?? 'demo-class') === classroomId;
+}
+export function downloadFile(content: string, filename: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+export function downloadJson(data: unknown, filename: string) {
+  downloadFile(JSON.stringify(data, null, 2), filename, 'application/json');
+}
+/** Lowercase ASCII words joined by hyphens, for file names. */
+export function slug(text: string) {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }

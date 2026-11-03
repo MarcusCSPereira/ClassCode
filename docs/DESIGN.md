@@ -13,7 +13,7 @@ Direção: um ambiente de aprendizagem calmo e universitário, com azul índigo,
 | Laboratório visual | Busca binária e bubble sort, passo anterior/próximo, reprodução, velocidade e pseudocódigo |
 | Minhas turmas | Nome, professor, semestre, código e desafios associados |
 | Perfil demonstrativo | Nome e escolha explícita da perspectiva de aluno/professor |
-| Painel do professor | Criação de turmas/questões, números locais e exportação JSON |
+| Painel do professor | Criação de turmas/questões e exportação JSON; acompanhamento da turma com resumo, tabela de alunos e sinais de atenção, questões que mais exigiram ajuda, alunos por etapa, mapa aluno × questão e CSV |
 | Nova questão | Formulário completo no padrão pedagógico |
 | Registro de conclusão | Reflexão ou evidência e declaração explícita de validação |
 
@@ -55,6 +55,7 @@ As fontes são carregadas do Google Fonts; os fallbacks mantêm a aplicação ut
 ## Estados e contratos visuais
 
 - Tópico sem questões: “Em preparação”, com currículo e pré-requisitos disponíveis.
+- Acompanhamento da turma (CC-19): carregando, turma sem alunos (mostra o código de convite), erro com "Tentar novamente" e professor sem turma. As tabelas rolam dentro do próprio quadro, focável pelo teclado, e a página não rola na horizontal. Os sinais aparecem como texto, com rótulo e motivo, e o aviso "não são nota" fica fixo sob o título. As cores usam só tokens de tema, válidos no claro e no escuro.
 - Estado da etapa (CC-16): selo com badges existentes e sempre uma frase equivalente ("Recomendado após…", "1 de 2 para concluir"). No cartão compacto do celular (≤ 430 px) o selo some e a frase permanece. Enquanto a atividade carrega, "Calculando o próximo passo…" e botões de praticar desabilitados.
 - Dica bloqueada: tempo restante e botão desabilitado.
 - Busca sem resultado: estado vazio com orientação.

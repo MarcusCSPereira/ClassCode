@@ -71,3 +71,13 @@ Cálculo das métricas do professor em `src/lib/metrics.ts`, sem alteração de 
 - `npm run test:e2e`: 16 execuções, sem mudança em relação ao CC-16.
 - Os testes usam uma turma fictícia com um aluno por situação da seção 6 de [ENTREGA-2.md](ENTREGA-2.md): ativo, sem tentativas, inativo há 9 dias, travado e dependente de dicas. Eles cobrem métricas por aluno e por questão, funil de dicas, ranking de ajuda, distribuição por etapa, mapa aluno × questão, dica aberta depois da conclusão, atividade fora da turma, turma vazia e o CSV (formato pt-BR, escape de `;` e aspas, proteção contra fórmulas).
 - Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.
+
+## Entrega 2 · CC-19 (02/11/2026)
+
+Painel de acompanhamento da turma (modo demo).
+
+- `npm run check`: TypeScript, **51 testes de unidade** (2 novos para `slug` e `belongsToClassroom`) e build.
+- `npm run test:e2e`: **9 cenários em cada viewport (18 execuções)**. O novo cobre a tabela de alunos, o mapa aluno × questão, o download do CSV (nome e conteúdo), o estado de turma sem alunos com exportação desabilitada e a ausência de rolagem horizontal.
+- Revisão visual com dados semeados: desktop 1440 px (claro) e celular 375 px (escuro). As tabelas rolam dentro do quadro; a página não rola na horizontal.
+- Sem teste automatizado: o estado de erro, porque o `DemoRepository` não falha nesse caminho.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   ArrowRight,
   ChartNoAxesCombined,
@@ -108,6 +108,11 @@ export default function App() {
   const current = activity && currentModule(modules, progress);
   const recommendation = activity && recommendNext(modules, all, activity);
   const recommended = recommendation && all.find((p) => p.id === recommendation.problemId);
+  // A new function when the activity changes makes the teacher panel reload.
+  const loadClassroomActivity = useCallback(
+    (classroomId: string) => repository.classroomActivity(classroomId),
+    [state.startedAt, state.hintViews, state.reports, state.name, state.joinedClassIds],
+  );
   const teacher = state.role === 'teacher';
   const myClasses = state.classes.filter((c) => teacher || state.joinedClassIds.includes(c.id));
   function navigate(p: Page, problemId?: string) {
@@ -309,10 +314,12 @@ export default function App() {
           {page === 'teacher' && (
             <TeacherPage
               teacher={teacher}
-              classCount={state.classes.length}
+              classes={state.classes}
+              problems={all}
               customProblems={state.customProblems}
               solvedCount={solvedCount}
               solved={solved}
+              loadActivity={loadClassroomActivity}
               onCreateClass={() => setModal('create-class')}
               onCreateProblem={() => setModal('create-problem')}
               onExport={() =>

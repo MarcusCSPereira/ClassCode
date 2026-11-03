@@ -1,5 +1,6 @@
 import { problems as defaultCatalog } from '../lib/catalog';
 import {
+  belongsToClassroom,
   normalizeClassCode,
   remainingHintSeconds,
   validateProblem,
@@ -24,8 +25,8 @@ const withoutHintText = (p: Problem): ProblemSummary => ({
 /** The seeded class receives the catalog; other classes only their own problems. */
 function classroomProblemIds(catalog: Problem[], state: DemoState, classroomId: string) {
   return new Set(
-    [...(classroomId === 'demo-class' ? catalog : []), ...state.customProblems]
-      .filter((p) => (p.authorClassId ?? 'demo-class') === classroomId)
+    [...catalog, ...state.customProblems]
+      .filter((p) => belongsToClassroom(p, classroomId))
       .map((p) => p.id),
   );
 }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  belongsToClassroom,
   initialState,
   normalizeClassCode,
   remainingHintSeconds,
   safeExternalUrl,
+  slug,
   validateProblem,
   visibleProblems,
 } from './domain';
@@ -63,6 +65,16 @@ describe('contrato de conteúdo', () => {
 });
 describe('turmas da demonstração', () => {
   it('normaliza código', () => expect(normalizeClassCode(' class26 ')).toBe('CLASS26'));
+  it('atribui o catálogo à turma inicial e questões autorais à turma de origem', () => {
+    expect(belongsToClassroom(problems[0], 'demo-class')).toBe(true);
+    expect(belongsToClassroom(problems[0], 'outra')).toBe(false);
+    expect(belongsToClassroom({ authorClassId: 'outra' }, 'outra')).toBe(true);
+    expect(belongsToClassroom({ authorClassId: 'outra' }, 'demo-class')).toBe(false);
+  });
+  it('gera nomes de arquivo sem acentos nem símbolos', () => {
+    expect(slug('Algoritmos e programação I')).toBe('algoritmos-e-programacao-i');
+    expect(slug('  Turma B · 2026/2 ')).toBe('turma-b-2026-2');
+  });
   it('só lista conteúdo de turmas participantes para aluno', () => {
     const state = initialState();
     state.customProblems = [{ ...problems[0], id: 'custom', authorClassId: 'another-class' }];

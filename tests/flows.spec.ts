@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 async function nav(page: Page, name: string | RegExp) {
   const menu = page.getByRole('button', { name: 'Abrir navegação' });
   if (await menu.isVisible()) await menu.click();
@@ -226,4 +227,52 @@ test('dica liberada só conta como lida depois do clique', async ({ page }) => {
     page.getByText('Quais informações entram e qual resultado deve sair?', { exact: true }),
   ).toBeVisible();
   expect((await views()).map((v: { ordinal: number }) => v.ordinal)).toEqual([1]);
+});
+
+test('professor acompanha a turma e exporta o CSV', async ({ page }) => {
+  // The single demo identity practices as a student first.
+  await page.goto('/#problem/sum');
+  await page.getByRole('button', { name: 'Registrar conclusão', exact: true }).click();
+  await page.getByLabel('Link da submissão ou reflexão sobre a solução').fill('Somei e testei.');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Salvar conclusão declarada' }).click();
+  await page.goto('/#problem/parity');
+  await expect(page.getByRole('heading', { name: 'Par ou ímpar?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Alterar perfil da demonstração' }).click();
+  await page.getByRole('combobox', { name: 'Perspectiva', exact: true }).selectOption('teacher');
+  await page.getByRole('button', { name: 'Acessar demonstração' }).click();
+
+  const panel = page.getByRole('region', { name: 'Acompanhamento da turma' });
+  await expect(panel).toContainText('Conclusões são autodeclaradas');
+  const student = panel
+    .getByRole('region', { name: 'Tabela de alunos' })
+    .getByRole('row', { name: /Alex/ });
+  await expect(student).toContainText('100%');
+  await expect(student).toContainText('Primeiros algoritmos');
+  const map = panel
+    .getByRole('region', { name: 'Mapa aluno × questão' })
+    .getByRole('row', { name: /Alex/ });
+  await expect(map).toContainText('Concluiu sem dica');
+  await expect(map).toContainText('Em andamento');
+
+  const downloading = page.waitForEvent('download');
+  await panel.getByRole('button', { name: 'Exportar CSV' }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe(
+    'classcode-algoritmos-e-programacao-i-acompanhamento.csv',
+  );
+  const csv = await readFile(await download.path(), 'utf8');
+  expect(csv).toContain('Conclusões autodeclaradas');
+  expect(csv).toMatch(/\r\nAlex;/);
+
+  await page.getByRole('button', { name: 'Criar uma turma', exact: false }).click();
+  await page.getByLabel('Nome da turma').fill('Turma vazia');
+  await page.getByRole('button', { name: 'Criar turma', exact: true }).last().click();
+  await nav(page, 'Painel do professor');
+  await panel.getByLabel('Turma acompanhada').selectOption({ label: 'Turma vazia' });
+  await expect(panel).toContainText('Nenhum aluno matriculado ainda.');
+  await expect(panel.getByRole('button', { name: 'Exportar CSV' })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
 });

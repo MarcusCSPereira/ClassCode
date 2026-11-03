@@ -8,14 +8,18 @@ import {
   Plus,
   Users,
 } from 'lucide-react';
-import type { ProblemSummary } from '../data/repository';
+import type { Classroom } from '../lib/types';
+import type { ClassroomActivity, ProblemSummary } from '../data/repository';
+import ClassMetrics from '../components/ClassMetrics';
 import ProblemList from '../components/ProblemList';
 export default function TeacherPage({
   teacher,
-  classCount,
+  classes,
+  problems,
   customProblems,
   solvedCount,
   solved,
+  loadActivity,
   onCreateClass,
   onCreateProblem,
   onExport,
@@ -23,10 +27,12 @@ export default function TeacherPage({
   onChangeProfile,
 }: {
   teacher: boolean;
-  classCount: number;
+  classes: Classroom[];
+  problems: ProblemSummary[];
   customProblems: ProblemSummary[];
   solvedCount: number;
   solved: string[];
+  loadActivity: (classroomId: string) => Promise<ClassroomActivity>;
   onCreateClass: () => void;
   onCreateProblem: () => void;
   onExport: () => void;
@@ -59,7 +65,7 @@ export default function TeacherPage({
       <div className="teacher-stats">
         <section className="card">
           <Users />
-          <strong>{classCount}</strong>
+          <strong>{classes.length}</strong>
           <span>Turmas na demonstração</span>
         </section>
         <section className="card">
@@ -112,8 +118,8 @@ export default function TeacherPage({
           <span className="eyebrow">PRÓXIMO MARCO DO PROJETO</span>
           <h2>Da demonstração à sala de aula.</h2>
           <p>
-            Autenticação institucional, autorização e acompanhamento de alunos serão conectados ao
-            backend. Este painel exibe apenas dados deste navegador.
+            Autenticação institucional e autorização serão conectadas ao backend. Por enquanto, o
+            acompanhamento abaixo usa apenas dados deste navegador.
           </p>
           <a
             className="text-button"
@@ -125,6 +131,7 @@ export default function TeacherPage({
           </a>
         </section>
       </div>
+      <ClassMetrics classes={classes} problems={problems} loadActivity={loadActivity} />
       <div className="section-heading">
         <h2>Seus desafios publicados</h2>
       </div>

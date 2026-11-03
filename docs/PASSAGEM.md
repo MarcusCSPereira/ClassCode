@@ -39,6 +39,65 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-19
+
+**Itens do backlog:** CC-19 (concluído no modo demo)
+
+**Feito**
+
+- Nova seção **"Acompanhamento da turma"** no Painel do professor, em `src/components/ClassMetrics.tsx`:
+  - seletor "Turma acompanhada";
+  - resumo: matriculados, ativos em 7 dias, conclusões autodeclaradas e alunos com sinais;
+  - **tabela de alunos**, com os sinais de atenção e o motivo de cada um;
+  - **questões que mais exigiram ajuda** (top 5, com funil das dicas e taxa de conclusão);
+  - **alunos por etapa**;
+  - **mapa aluno × questão**;
+  - botão **Exportar CSV**.
+- Estados de carregamento, turma sem alunos (mostra o código de convite), erro com "Tentar novamente" e professor sem turma. Ao recarregar a mesma turma, os dados anteriores continuam visíveis.
+- Texto fixo sob o título: "Conclusões são autodeclaradas. As métricas apoiam o acompanhamento pedagógico e não são nota."
+- O `App` passa `loadActivity` com `useCallback`. A função muda quando tentativas, dicas, conclusões, nome ou matrículas mudam, e isso recarrega o painel.
+- `domain.ts`:
+  - `belongsToClassroom`: uma única regra de "questões da turma", agora usada pela tela de turmas, pelo `DemoRepository` e pelo painel;
+  - `downloadFile`: download genérico; o `downloadJson` passou a usá-lo;
+  - `slug`: nome do arquivo CSV.
+- O cartão "Próximo marco" do painel deixou de dizer que o acompanhamento de alunos não existe.
+
+**Estado verificado**
+
+- `npm run check`: TypeScript, 51 testes de unidade (2 novos, para `slug` e `belongsToClassroom`) e build passaram.
+- `npm run test:e2e`: 18 de 18 (9 cenários × desktop e celular). O novo cenário:
+  - o aluno conclui um desafio e abre outro;
+  - a mesma identidade passa a professor e vê a tabela (100% de autonomia, etapa Primeiros algoritmos) e o mapa ("Concluiu sem dica", "Em andamento");
+  - baixa o CSV e confere o nome do arquivo e o conteúdo;
+  - cria uma turma vazia e vê o estado vazio, com o CSV desabilitado, sem rolagem horizontal.
+- Revisão visual com dados semeados (um sinal "Travado"): desktop 1440 px no tema claro, celular 375 px no tema escuro. As tabelas rolam dentro do próprio quadro, sem rolagem horizontal na página.
+- Não executado: `bash tests/test-db.sh` (sem PostgreSQL local); o SQL não mudou.
+
+**Decisões tomadas**
+
+- O seletor se chama "Turma acompanhada" porque o formulário de questão já tem um seletor "Turma". Com dois rótulos iguais, o E2E antigo quebrou; renomear evitou mexer nele.
+- O ranking mostra as 5 primeiras questões.
+- O CSV exporta só a tabela por aluno, como pede a seção 8.
+
+**Ficou de fora / limites conhecidos**
+
+- No modo demo, a turma tem no máximo um aluno: a própria identidade local, mostrada com o nome do perfil. O painel fica demonstrável com o CC-21 ou com usuários reais (CC-02 a CC-04 e CC-18).
+- O estado de erro não tem teste automatizado: o `DemoRepository` não falha nesse caminho. Ele será exercitado com o repositório remoto.
+- O mapa mostra os títulos completos das questões; com muitas questões, a tabela rola na horizontal.
+
+**Próximo passo esperado**
+
+1. **CC-21 (frente Pedagógica):** turma fictícia no modo demo, com 6–8 alunos e atividade gerada de forma determinística. Precisa estar identificada na interface como dados fictícios.
+   - Sugestão: outra turma semeada ("Turma de demonstração · dados fictícios") cujo `classroomActivity` devolve alunos gerados por uma função pura e testada em `src/data/`. Assim, a turma inicial continua só com a identidade real do navegador.
+   - Cobrir os quatro sinais e uma questão com muita ajuda, para a apresentação.
+2. **Frente Plataforma:** com D1 decidido, CC-01 → CC-02 → CC-03 → CC-04, e CC-18 (`classroom_activity` no banco). O painel já consome `ClassroomActivity`, então não precisa mudar.
+3. Atualizar as capturas em `docs/images/` (visão geral e painel) antes da apresentação.
+4. Enviar a branch ao GitHub para revisão: CC-00, CC-15, CC-16, CC-17 e CC-19 ainda são commits locais.
+
+**Bloqueios**
+
+- Nenhum para CC-21. CC-01 e CC-18 seguem dependendo de D1.
+
 ### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-17
 
 **Itens do backlog:** CC-17 (concluído)

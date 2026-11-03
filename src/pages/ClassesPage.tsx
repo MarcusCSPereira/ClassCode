@@ -1,4 +1,5 @@
 import { Braces, ChevronRight, CircleHelp, GraduationCap, Plus } from 'lucide-react';
+import { belongsToClassroom } from '../lib/domain';
 import type { Classroom } from '../lib/types';
 import type { ProblemSummary } from '../data/repository';
 export default function ClassesPage({
@@ -64,16 +65,15 @@ export default function ClassesPage({
             </div>
             <div className="class-challenges">
               <strong>Desafios da turma</strong>
-              {(c.id === 'demo-class'
-                ? all.filter((p) => !p.authorClassId || p.authorClassId === c.id)
-                : all.filter((p) => p.authorClassId === c.id)
-              ).map((p) => (
-                <button key={p.id} onClick={() => onOpenProblem(p)}>
-                  <span>{p.title}</span>
-                  <ChevronRight size={16} />
-                </button>
-              ))}
-              {c.id !== 'demo-class' && !all.some((p) => p.authorClassId === c.id) && (
+              {all
+                .filter((p) => belongsToClassroom(p, c.id))
+                .map((p) => (
+                  <button key={p.id} onClick={() => onOpenProblem(p)}>
+                    <span>{p.title}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                ))}
+              {!all.some((p) => belongsToClassroom(p, c.id)) && (
                 <p className="helper">O primeiro desafio ainda será publicado.</p>
               )}
             </div>

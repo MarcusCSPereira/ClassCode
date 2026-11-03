@@ -65,7 +65,7 @@ Itens adicionados na Entrega 2. Regras, contratos e critérios completos em [ENT
 | CC-16 | P0 | Trilha adaptativa na UI do aluno: estados, recomendação com motivo e meta derivada. **Concluído em 02/11 no modo demo** | CC-00, CC-15 |
 | CC-17 | P0 | Cálculo das métricas e sinais de atenção, com testes. **Concluído em 02/11** | Nenhuma |
 | CC-18 | P0 | RPCs `classroom_activity` e `my_activity` em migration nova, com testes de negação | CC-01 |
-| CC-19 | P0 | Painel de métricas do professor com mapa aluno × questão e CSV | CC-00, CC-17, CC-18 |
+| CC-19 | P0 | Painel de métricas do professor com mapa aluno × questão e CSV. **Concluído em 02/11 no modo demo** | CC-00, CC-17, CC-18 |
 | CC-20 | P0 | Trilha base no servidor e importação idempotente para a turma | CC-05 |
 | CC-21 | P1 | Turma fictícia no modo demo para demonstrar o painel, identificada como tal | CC-19 |
 

@@ -1,11 +1,13 @@
 import type { DemoState, Hint, Problem } from './types';
+/** Key kept from the first release; the stored `version` field drives migration. */
 export const STORAGE_KEY = 'classcode.demo.v1';
-export function initialState(): DemoState {
+export function initialState(now = Date.now()): DemoState {
   return {
-    version: 1,
+    version: 2,
     role: 'student',
     name: 'Alex',
     joinedClassIds: ['demo-class'],
+    joinedAt: { 'demo-class': now },
     classes: [
       {
         id: 'demo-class',
@@ -16,15 +18,14 @@ export function initialState(): DemoState {
       },
     ],
     customProblems: [],
-    solved: [],
     startedAt: {},
     drafts: {},
-    revealedHints: {},
-    evidence: {},
+    hintViews: {},
+    reports: {},
   };
 }
 export function remainingHintSeconds(
-  hint: Hint,
+  hint: Pick<Hint, 'afterSeconds'>,
   startedAt: number | undefined,
   now: number,
 ): number {
@@ -51,7 +52,7 @@ export function safeExternalUrl(value: string): boolean {
     return false;
   }
 }
-export function validateProblem(p: Problem): string | null {
+export function validateProblem(p: Omit<Problem, 'id' | 'source'>): string | null {
   if (
     ![
       p.title,
@@ -81,13 +82,30 @@ export function visibleProblems(catalog: Problem[], state: DemoState): Problem[]
     ),
   ];
 }
-export function downloadJson(data: unknown, filename: string) {
-  const url = URL.createObjectURL(
-    new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
-  );
+export const FICTITIOUS_CLASS_ID = 'demo-ficticia';
+/** Catalog problems have no class: they are the base trail of the seeded demo classes. */
+export function belongsToClassroom(p: { authorClassId?: string }, classroomId: string) {
+  return p.authorClassId
+    ? p.authorClassId === classroomId
+    : classroomId === 'demo-class' || classroomId === FICTITIOUS_CLASS_ID;
+}
+export function downloadFile(content: string, filename: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+export function downloadJson(data: unknown, filename: string) {
+  downloadFile(JSON.stringify(data, null, 2), filename, 'application/json');
+}
+/** Lowercase ASCII words joined by hyphens, for file names. */
+export function slug(text: string) {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }

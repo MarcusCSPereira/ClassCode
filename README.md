@@ -2,7 +2,7 @@
 
 **Um passo. Um algoritmo.** Plataforma educativa para aprender algoritmos com trilhas progressivas, dicas no tempo certo e acompanhamento por professores.
 
-[Demonstração](https://marcuscspereira.github.io/ClassCode/) · [Plano de desenvolvimento](docs/PLANO.md) · [Arquitetura](docs/ARQUITETURA.md) · [Design](docs/DESIGN.md) · [Pesquisa](docs/PESQUISA.md)
+[Demonstração](https://marcuscspereira.github.io/ClassCode/) · [Plano de desenvolvimento](docs/PLANO.md) · [Entrega 2](docs/ENTREGA-2.md) · [Registro de passagem](docs/PASSAGEM.md) · [Arquitetura](docs/ARQUITETURA.md) · [Design](docs/DESIGN.md) · [Pesquisa](docs/PESQUISA.md)
 
 ![Dashboard do ClassCode](docs/images/dashboard.jpg)
 
@@ -13,7 +13,9 @@ Base React + TypeScript + Vite, com design responsivo e fluxos navegáveis. **É
 | Funcionalidade | Estado nesta base |
 | --- | --- |
 | Dashboard, desafios, turmas e painel do professor | Interface funcional com dados locais |
+| Acompanhamento do professor | Métricas por aluno e por questão, sinais de atenção, mapa aluno × questão e CSV ([catálogo](docs/ENTREGA-2.md#6-métricas-do-professor-catálogo-v1)); na demo, há uma turma de dados fictícios, identificada como tal, para ver o painel com 8 alunos |
 | Trilha do básico ao avançado | 12 etapas mapeadas; 7 desafios nas 5 primeiras |
+| Evolução automática | Próximo passo recomendado com motivo e estado de cada etapa conforme conclusões e dicas usadas ([regras](docs/ENTREGA-2.md#5-evolução-automática-e-gradual-modelo-v1)); dados locais por enquanto |
 | Criar turma e entrar com código | Funciona no mesmo navegador; experimente `CLASS26` |
 | Professor criar questão no padrão pedagógico | Formulário validado e publicação local |
 | Dicas em 3, 7 e 12 minutos | Cronômetro local persistido; não é um controle de acesso real |
@@ -69,8 +71,12 @@ O CI executa domínio, build, navegação e permissões do banco. Os testes SQL 
 
 ```text
 src/
-  App.tsx                  Navegação e composição dos fluxos
-  components/              Modal, formulário de questão e visualizador
+  App.tsx                  Navegação, barra lateral e composição das telas
+  pages/                   Uma tela por arquivo (visão geral, trilha, desafios, prática...)
+  modals/                  Diálogos: turma, perfil, conclusão, ajuda e tópico
+  components/              Componentes reutilizáveis, editor e visualizador
+  data/repository.ts       Contrato entre a interface e a fonte de dados
+  data/demoRepository.ts   Implementação da demonstração sobre localStorage
   lib/catalog.ts           Currículo, questões iniciais e templates de linguagem
   lib/domain.ts            Regras de dicas, conteúdo e demonstração
   lib/algorithms.ts        Geradores de passos das animações
@@ -92,6 +98,6 @@ A integração futura com Supabase utiliza apenas a URL e a chave publicável no
 
 ## Como o time continua
 
-Comece por [CONTRIBUTING.md](CONTRIBUTING.md) e execute os itens do [backlog](docs/PLANO.md#backlog-executável), em ordem de dependência. A prioridade é transformar o fluxo de demonstração em um fluxo multiusuário persistente. O judge integrado é a extensão seguinte.
+Comece por [CONTRIBUTING.md](CONTRIBUTING.md) e pela entrada mais recente do [registro de passagem](docs/PASSAGEM.md), que diz o próximo passo esperado. Execute os itens do [backlog](docs/PLANO.md#backlog-executável) em ordem de dependência. A [Entrega 2](docs/ENTREGA-2.md) transforma a demonstração em um fluxo multiusuário persistente e acrescenta a trilha adaptativa e as métricas do professor. O judge integrado é a extensão seguinte.
 
 Licença MIT para o código e o conteúdo autoral deste repositório. Referências, marcas e enunciados de terceiros mantêm suas próprias condições de uso.

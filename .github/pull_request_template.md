@@ -8,6 +8,15 @@ Quem é beneficiado e qual comportamento muda?
 - [ ] Fluxos afetados testados em desktop e celular
 - [ ] Autorização conferida no banco quando houver acesso a dados
 - [ ] Documentação e limitações atualizadas
+- [ ] Entrada em `docs/PASSAGEM.md` com o próximo passo esperado
+
+## Itens do backlog
+
+CC-xx
+
+## Próximo passo para quem continuar
+
+Primeira ação concreta, copiada da entrada em `docs/PASSAGEM.md`.
 
 ## Evidência
 

@@ -82,7 +82,7 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 **Próximo passo esperado**
 
-1. **Revisão:** enviar a branch ao GitHub e abrir o PR da frente Pedagógica para o time revisar. Todos os commits ainda são locais.
+1. **Revisão:** a branch foi enviada ao GitHub em 02/11. Revisar o PR `feat/entrega-2-mvp` → `main`; o CI (domínio, build, E2E e banco) roda no PR.
 2. **Decisões D1–D5** ([ENTREGA-2.md](ENTREGA-2.md#10-decisões-pendentes-do-time)). D1 (Supabase) destrava a frente Plataforma.
 3. **Frente Plataforma:** CC-01 → CC-02 → CC-03 → CC-04 → CC-05/CC-20 → CC-06 → CC-07 e CC-18. As telas da frente Pedagógica já consomem `ClassCodeRepository`; o trabalho é implementar `src/data/supabaseRepository.ts` e mover as leituras.
 4. Antes da apresentação: atualizar as capturas (visão geral, trilha e painel com a turma fictícia) e ensaiar o roteiro do [PLANO.md](PLANO.md#roteiro-da-apresentação-68-minutos).

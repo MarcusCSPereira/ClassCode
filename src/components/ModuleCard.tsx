@@ -1,5 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
-import type { Module, Problem } from '../lib/types';
+import type { Module } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 import Progress from './Progress';
 import TopicIcon from './TopicIcon';
 export default function ModuleCard({
@@ -11,7 +12,7 @@ export default function ModuleCard({
 }: {
   module: Module;
   index: number;
-  problems: Problem[];
+  problems: ProblemSummary[];
   solved: string[];
   onSelect: (m: Module) => void;
 }) {

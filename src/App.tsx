@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   ArrowRight,
   ChartNoAxesCombined,
@@ -18,16 +18,12 @@ import {
   Waypoints,
   X,
 } from 'lucide-react';
+import { demoStore, repository } from './data';
+import { describeError, RepositoryError, type ProblemSummary } from './data/repository';
 import { problems } from './lib/catalog';
-import {
-  downloadJson,
-  initialState,
-  normalizeClassCode,
-  STORAGE_KEY,
-  visibleProblems,
-} from './lib/domain';
+import { downloadJson, visibleProblems } from './lib/domain';
 import { pageNames, problemIdFromHash, readPage, type Page } from './lib/navigation';
-import type { DemoState, Language, Module, Problem, Role } from './lib/types';
+import type { Language, Module, Role } from './lib/types';
 import { useTheme } from './lib/useTheme';
 import Modal from './components/Modal';
 import ProblemEditor from './components/ProblemEditor';
@@ -46,68 +42,37 @@ import ReportModal from './modals/ReportModal';
 import TopicModal from './modals/TopicModal';
 
 type ModalName = 'join' | 'profile' | 'create-class' | 'create-problem' | 'help' | 'report';
-function readState(): DemoState {
-  try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-    if (
-      value?.version === 1 &&
-      ['student', 'teacher'].includes(value.role) &&
-      Array.isArray(value.classes) &&
-      Array.isArray(value.solved) &&
-      Array.isArray(value.joinedClassIds) &&
-      Array.isArray(value.customProblems) &&
-      typeof value.startedAt === 'object' &&
-      value.startedAt &&
-      value.drafts &&
-      value.revealedHints &&
-      value.evidence &&
-      typeof value.name === 'string'
-    )
-      return value;
-  } catch {
-    /* Storage is optional for the demo. */
-  }
-  return initialState();
-}
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
-  const [state, setState] = useState(readState);
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  // Reads still come from the local snapshot; CC-03 moves them to repository calls.
+  const state = useSyncExternalStore(demoStore.subscribe, demoStore.getSnapshot);
+  const storageError = demoStore.storageError();
   const [page, setPage] = useState<Page>(readPage);
-  const [activeProblem, setActiveProblem] = useState<Problem>(
+  const [activeProblem, setActiveProblem] = useState<ProblemSummary>(
     () =>
-      visibleProblems(problems, readState()).find((p) => p.id === problemIdFromHash()) ??
-      problems[0],
+      visibleProblems(problems, demoStore.getSnapshot()).find(
+        (p) => p.id === problemIdFromHash(),
+      ) ?? problems[0],
   );
   const [modal, setModal] = useState<ModalName | null>(null);
   const [topic, setTopic] = useState<Module | null>(null);
   const [language, setLanguage] = useState<Language>('python');
   const [notice, setNotice] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
-  const [storageError, setStorageError] = useState(false);
   const [problemTab, setProblemTab] = useState<ProblemTab>('statement');
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      setStorageError(true);
-    }
-  }, [state]);
+  const fail = (error: unknown) => setNotice(describeError(error));
   useEffect(() => {
     const handle = () => {
       const current = readPage();
       setPage(current);
       if (current === 'problem') {
-        const p = visibleProblems(problems, stateRef.current).find(
+        const p = visibleProblems(problems, demoStore.getSnapshot()).find(
           (p) => p.id === problemIdFromHash(),
         );
         if (p) {
           setActiveProblem(p);
-          setState((s) =>
-            s.startedAt[p.id] ? s : { ...s, startedAt: { ...s.startedAt, [p.id]: Date.now() } },
-          );
+          repository.startAttempt(p.id).catch(fail);
         } else {
           setPage('problems');
           location.hash = 'problems';
@@ -124,8 +89,9 @@ export default function App() {
     return () => clearTimeout(t);
   }, [notice]);
   const all = visibleProblems(problems, state);
-  const solvedCount = all.filter((p) => state.solved.includes(p.id)).length;
-  const next = all.find((p) => !state.solved.includes(p.id)) ?? all[0];
+  const solved = Object.keys(state.reports);
+  const solvedCount = all.filter((p) => solved.includes(p.id)).length;
+  const next = all.find((p) => !solved.includes(p.id)) ?? all[0];
   const teacher = state.role === 'teacher';
   const myClasses = state.classes.filter((c) => teacher || state.joinedClassIds.includes(c.id));
   function navigate(p: Page, problemId?: string) {
@@ -135,14 +101,11 @@ export default function App() {
     setMobileNav(false);
     window.scrollTo({ top: 0 });
   }
-  function openProblem(p: Problem) {
+  function openProblem(p: ProblemSummary) {
     setTopic(null);
     setActiveProblem(p);
     setProblemTab('statement');
-    setState((s) => ({
-      ...s,
-      startedAt: { ...s.startedAt, [p.id]: s.startedAt[p.id] ?? Date.now() },
-    }));
+    repository.startAttempt(p.id).catch(fail);
     navigate('problem', p.id);
   }
   function announce(message: string) {
@@ -282,7 +245,7 @@ export default function App() {
               name={state.name}
               teacher={teacher}
               problems={all}
-              solved={state.solved}
+              solved={solved}
               next={next}
               onOpenProblem={openProblem}
               onNavigate={navigate}
@@ -291,12 +254,12 @@ export default function App() {
             />
           )}
           {page === 'roadmap' && (
-            <RoadmapPage problems={all} solved={state.solved} onSelectTopic={setTopic} />
+            <RoadmapPage problems={all} solved={solved} onSelectTopic={setTopic} />
           )}
           {page === 'problems' && (
             <ProblemsPage
               problems={all}
-              solved={state.solved}
+              solved={solved}
               teacher={teacher}
               onCreateProblem={() => setModal('create-problem')}
               onOpenProblem={openProblem}
@@ -319,7 +282,7 @@ export default function App() {
               classCount={state.classes.length}
               customProblems={state.customProblems}
               solvedCount={solvedCount}
-              solved={state.solved}
+              solved={solved}
               onCreateClass={() => setModal('create-class')}
               onCreateProblem={() => setModal('create-problem')}
               onExport={() =>
@@ -334,10 +297,11 @@ export default function App() {
           )}
           {page === 'problem' && (
             <ProblemPage
+              key={activeProblem.id}
               problem={activeProblem}
               startedAt={state.startedAt[activeProblem.id]}
-              revealedHints={state.revealedHints[activeProblem.id] ?? []}
-              solved={state.solved.includes(activeProblem.id)}
+              viewedHints={(state.hintViews[activeProblem.id] ?? []).map((v) => v.ordinal)}
+              solved={solved.includes(activeProblem.id)}
               draft={state.drafts[draftKey]}
               language={language}
               theme={theme}
@@ -346,16 +310,14 @@ export default function App() {
               onTabChange={setProblemTab}
               onLanguageChange={setLanguage}
               onDraftChange={(value) =>
-                setState((s) => ({ ...s, drafts: { ...s.drafts, [draftKey]: value } }))
+                // Drafts stay local in every mode; remote drafts are outside the MVP.
+                demoStore.update((s) => ({ ...s, drafts: { ...s.drafts, [draftKey]: value } }))
               }
-              onRevealHint={(i) =>
-                setState((s) => ({
-                  ...s,
-                  revealedHints: {
-                    ...s.revealedHints,
-                    [activeProblem.id]: [...(s.revealedHints[activeProblem.id] ?? []), i],
-                  },
-                }))
+              onRevealHint={(ordinal) =>
+                repository.revealHint(activeProblem.id, ordinal).catch((error: unknown) => {
+                  fail(error);
+                  throw error;
+                })
               }
               onReport={() => setModal('report')}
               onBack={() => navigate('problems')}
@@ -375,7 +337,7 @@ export default function App() {
         <TopicModal
           topic={topic}
           problems={all}
-          solved={state.solved}
+          solved={solved}
           teacher={teacher}
           onOpenProblem={openProblem}
           onCreateProblem={() => {
@@ -390,7 +352,8 @@ export default function App() {
           name={state.name}
           role={state.role}
           onSubmit={(name: string, role: Role) => {
-            setState((s) => ({ ...s, name, role }));
+            // The perspective switch exists only in the demo; CC-02 replaces it with login.
+            demoStore.update((s) => ({ ...s, name, role }));
             setModal(null);
             navigate(role === 'teacher' ? 'teacher' : 'overview');
             announce('Perfil da demonstração alterado.');
@@ -401,35 +364,31 @@ export default function App() {
       {modal === 'join' && (
         <JoinClassModal
           onJoin={async (code) => {
-            const c = state.classes.find((c) => c.code === normalizeClassCode(code));
-            if (!c) return 'Código não encontrado neste navegador. Experimente CLASS26.';
-            setState((s) => ({
-              ...s,
-              joinedClassIds: [...new Set([...s.joinedClassIds, c.id])],
-            }));
-            setModal(null);
-            navigate('classes');
-            announce(`Você está na turma ${c.name}.`);
-            return null;
+            try {
+              const id = await repository.joinClassroom(code);
+              const joined = (await repository.listClassrooms()).find((c) => c.id === id);
+              setModal(null);
+              navigate('classes');
+              announce(`Você está na turma ${joined?.name}.`);
+              return null;
+            } catch (error) {
+              if (error instanceof RepositoryError && error.code === 'invalid_invite')
+                return 'Código não encontrado neste navegador. Experimente CLASS26.';
+              return describeError(error);
+            }
           }}
           onClose={() => setModal(null)}
         />
       )}
       {modal === 'create-class' && teacher && (
         <CreateClassModal
-          onCreate={(name, term) => {
-            const c = {
-              id: crypto.randomUUID(),
-              name,
-              code: crypto.randomUUID().slice(0, 8).toUpperCase(),
-              teacher: state.name,
-              term,
-            };
-            setState((s) => ({ ...s, classes: [...s.classes, c] }));
-            setModal(null);
-            navigate('classes');
-            announce(`Turma criada. Código: ${c.code}`);
-          }}
+          onCreate={(name, term) =>
+            repository.createClassroom(name, term).then(({ code }) => {
+              setModal(null);
+              navigate('classes');
+              announce(`Turma criada. Código: ${code}`);
+            }, fail)
+          }
           onClose={() => setModal(null)}
         />
       )}
@@ -437,37 +396,34 @@ export default function App() {
         <Modal title="Um desafio com propósito" onClose={() => setModal(null)} wide>
           <ProblemEditor
             classes={state.classes}
-            onSave={(p) => {
-              setState((s) => ({ ...s, customProblems: [...s.customProblems, p] }));
-              setModal(null);
-              navigate('teacher');
-              announce('Desafio publicado na demonstração.');
-            }}
+            onSave={(p) =>
+              repository.publishProblem(p).then(() => {
+                setModal(null);
+                navigate('teacher');
+                announce('Desafio publicado na demonstração.');
+                return null;
+              }, describeError)
+            }
           />
         </Modal>
       )}
       {modal === 'report' && (
         <ReportModal
           problemTitle={activeProblem.title}
-          evidence={state.evidence[activeProblem.id]}
-          solved={state.solved.includes(activeProblem.id)}
-          onSave={(evidence) => {
-            setState((s) => ({
-              ...s,
-              solved: [...new Set([...s.solved, activeProblem.id])],
-              evidence: { ...s.evidence, [activeProblem.id]: evidence },
-            }));
-            setModal(null);
-            announce('Conclusão autodeclarada registrada. Continue aprendendo!');
-          }}
-          onReopen={() => {
-            setState((s) => ({
-              ...s,
-              solved: s.solved.filter((id) => id !== activeProblem.id),
-            }));
-            setModal(null);
-            announce('Desafio reaberto para praticar.');
-          }}
+          evidence={state.reports[activeProblem.id]?.evidence}
+          solved={solved.includes(activeProblem.id)}
+          onSave={(evidence) =>
+            repository.reportProgress(activeProblem.id, evidence).then(() => {
+              setModal(null);
+              announce('Conclusão autodeclarada registrada. Continue aprendendo!');
+            }, fail)
+          }
+          onReopen={() =>
+            repository.reopenProblem(activeProblem.id).then(() => {
+              setModal(null);
+              announce('Desafio reaberto para praticar.');
+            }, fail)
+          }
           onClose={() => setModal(null)}
         />
       )}

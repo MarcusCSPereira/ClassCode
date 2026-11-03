@@ -1,11 +1,13 @@
 import type { DemoState, Hint, Problem } from './types';
+/** Key kept from the first release; the stored `version` field drives migration. */
 export const STORAGE_KEY = 'classcode.demo.v1';
-export function initialState(): DemoState {
+export function initialState(now = Date.now()): DemoState {
   return {
-    version: 1,
+    version: 2,
     role: 'student',
     name: 'Alex',
     joinedClassIds: ['demo-class'],
+    joinedAt: { 'demo-class': now },
     classes: [
       {
         id: 'demo-class',
@@ -16,15 +18,14 @@ export function initialState(): DemoState {
       },
     ],
     customProblems: [],
-    solved: [],
     startedAt: {},
     drafts: {},
-    revealedHints: {},
-    evidence: {},
+    hintViews: {},
+    reports: {},
   };
 }
 export function remainingHintSeconds(
-  hint: Hint,
+  hint: Pick<Hint, 'afterSeconds'>,
   startedAt: number | undefined,
   now: number,
 ): number {
@@ -51,7 +52,7 @@ export function safeExternalUrl(value: string): boolean {
     return false;
   }
 }
-export function validateProblem(p: Problem): string | null {
+export function validateProblem(p: Omit<Problem, 'id' | 'source'>): string | null {
   if (
     ![
       p.title,

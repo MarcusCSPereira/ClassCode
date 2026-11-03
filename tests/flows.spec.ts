@@ -135,3 +135,43 @@ test('tema persiste e as três linguagens destacam tokens sem perder rascunhos',
     true,
   );
 });
+
+test('dados salvos pela primeira versão da demo continuam disponíveis', async ({ page }) => {
+  await page.addInitScript(() => {
+    const started = Date.now() - 3_600_000;
+    localStorage.setItem(
+      'classcode.demo.v1',
+      JSON.stringify({
+        version: 1,
+        role: 'student',
+        name: 'Bia',
+        joinedClassIds: ['demo-class'],
+        classes: [
+          {
+            id: 'demo-class',
+            name: 'Algoritmos e programação I',
+            code: 'CLASS26',
+            teacher: 'Prof. Marina',
+            term: '2026.2',
+          },
+        ],
+        customProblems: [],
+        solved: ['sum'],
+        startedAt: { sum: started },
+        drafts: { 'sum:python': 'print("rascunho antigo")' },
+        revealedHints: { sum: [0] },
+        evidence: { sum: 'Somei os dois números.' },
+      }),
+    );
+  });
+  await page.goto('/#problem/sum');
+  await expect(page.getByLabel('Editor de código')).toContainText('print("rascunho antigo")');
+  await page.getByRole('button', { name: 'Dicas progressivas' }).click();
+  await expect(
+    page.getByText('Quais informações entram e qual resultado deve sair?', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Conclusão declarada · ver registro' }).click();
+  await expect(page.getByLabel('Link da submissão ou reflexão sobre a solução')).toHaveValue(
+    'Somei os dois números.',
+  );
+});

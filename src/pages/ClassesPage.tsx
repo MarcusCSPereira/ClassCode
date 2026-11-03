@@ -1,5 +1,6 @@
 import { Braces, ChevronRight, CircleHelp, GraduationCap, Plus } from 'lucide-react';
-import type { Classroom, Problem } from '../lib/types';
+import type { Classroom } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 export default function ClassesPage({
   teacher,
   classes,
@@ -10,9 +11,9 @@ export default function ClassesPage({
 }: {
   teacher: boolean;
   classes: Classroom[];
-  problems: Problem[];
+  problems: ProblemSummary[];
   onPrimaryAction: () => void;
-  onOpenProblem: (p: Problem) => void;
+  onOpenProblem: (p: ProblemSummary) => void;
   onAnnounce: (message: string) => void;
 }) {
   return (

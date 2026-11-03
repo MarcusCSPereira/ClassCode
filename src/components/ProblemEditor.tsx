@@ -2,23 +2,24 @@ import { useState } from 'react';
 import { modules } from '../lib/catalog';
 import { validateProblem } from '../lib/domain';
 import type { Classroom, Problem } from '../lib/types';
+import type { NewProblem } from '../data/repository';
 export default function ProblemEditor({
   classes,
   onSave,
 }: {
   classes: Classroom[];
-  onSave: (p: Problem) => void;
+  /** Resolves to an error message, or null after publishing. */
+  onSave: (p: NewProblem) => Promise<string | null>;
 }) {
   const [error, setError] = useState('');
   return (
     <form
       className="form-stack"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         const d = new FormData(e.currentTarget);
         const get = (key: string) => String(d.get(key) ?? '').trim();
-        const p: Problem = {
-          id: crypto.randomUUID(),
+        const p: NewProblem = {
           title: get('title'),
           objective: get('objective'),
           statement: get('statement'),
@@ -32,7 +33,6 @@ export default function ProblemEditor({
           exampleOutput: get('exampleOutput'),
           externalUrl: get('externalUrl') || undefined,
           authorClassId: get('class'),
-          source: 'Questão do professor · demonstração local',
           hints: [180, 420, 720].map((afterSeconds, i) => ({
             afterSeconds,
             text: get(`hint${i}`),
@@ -43,7 +43,8 @@ export default function ProblemEditor({
           setError(validation);
           return;
         }
-        onSave(p);
+        const failure = await onSave(p);
+        if (failure) setError(failure);
       }}
     >
       <p className="helper">

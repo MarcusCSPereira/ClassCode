@@ -8,7 +8,7 @@ import {
   Plus,
   Users,
 } from 'lucide-react';
-import type { Problem } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 import ProblemList from '../components/ProblemList';
 export default function TeacherPage({
   teacher,
@@ -24,13 +24,13 @@ export default function TeacherPage({
 }: {
   teacher: boolean;
   classCount: number;
-  customProblems: Problem[];
+  customProblems: ProblemSummary[];
   solvedCount: number;
   solved: string[];
   onCreateClass: () => void;
   onCreateProblem: () => void;
   onExport: () => void;
-  onOpenProblem: (p: Problem) => void;
+  onOpenProblem: (p: ProblemSummary) => void;
   onChangeProfile: () => void;
 }) {
   if (!teacher)

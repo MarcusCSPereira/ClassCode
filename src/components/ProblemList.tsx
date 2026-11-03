@@ -1,14 +1,14 @@
 import { Check, ChevronRight, Clock3, Search } from 'lucide-react';
 import { modules } from '../lib/catalog';
-import type { Problem } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 export default function ProblemList({
   list,
   solved,
   onOpen,
 }: {
-  list: Problem[];
+  list: ProblemSummary[];
   solved: string[];
-  onOpen: (p: Problem) => void;
+  onOpen: (p: ProblemSummary) => void;
 }) {
   return (
     <div className="problem-list">

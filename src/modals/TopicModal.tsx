@@ -1,6 +1,7 @@
 import { Sprout } from 'lucide-react';
 import { modules } from '../lib/catalog';
-import type { Module, Problem } from '../lib/types';
+import type { Module } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 import Modal from '../components/Modal';
 import ProblemList from '../components/ProblemList';
 import TopicIcon from '../components/TopicIcon';
@@ -14,10 +15,10 @@ export default function TopicModal({
   onClose,
 }: {
   topic: Module;
-  problems: Problem[];
+  problems: ProblemSummary[];
   solved: string[];
   teacher: boolean;
-  onOpenProblem: (p: Problem) => void;
+  onOpenProblem: (p: ProblemSummary) => void;
   onCreateProblem: () => void;
   onClose: () => void;
 }) {

@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { modules } from '../lib/catalog';
 import type { Page } from '../lib/navigation';
-import type { Module, Problem } from '../lib/types';
+import type { Module } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 import ModuleCard from '../components/ModuleCard';
 import ProblemList from '../components/ProblemList';
 import Progress from '../components/Progress';
@@ -31,10 +32,10 @@ export default function OverviewPage({
 }: {
   name: string;
   teacher: boolean;
-  problems: Problem[];
+  problems: ProblemSummary[];
   solved: string[];
-  next: Problem;
-  onOpenProblem: (p: Problem) => void;
+  next: ProblemSummary;
+  onOpenProblem: (p: ProblemSummary) => void;
   onNavigate: (page: Page) => void;
   onPrimaryAction: () => void;
   onSelectTopic: (m: Module) => void;

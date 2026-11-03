@@ -1,8 +1,8 @@
 import { ArrowRight, BookOpen, Lightbulb } from 'lucide-react';
 import { problems } from '../lib/catalog';
-import type { Problem } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 import Visualizer from '../components/Visualizer';
-export default function LabPage({ onOpenProblem }: { onOpenProblem: (p: Problem) => void }) {
+export default function LabPage({ onOpenProblem }: { onOpenProblem: (p: ProblemSummary) => void }) {
   return (
     <>
       <div className="page-title">

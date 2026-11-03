@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 import { modules, starters } from '../lib/catalog';
 import { remainingHintSeconds } from '../lib/domain';
-import type { Language, Problem } from '../lib/types';
+import type { HintOrdinal, Language } from '../lib/types';
 import type { Theme } from '../lib/useTheme';
+import type { ProblemSummary } from '../data/repository';
 const CodeEditor = lazy(() => import('../components/CodeEditor'));
 export type ProblemTab = 'statement' | 'hints';
 const fmt = (seconds: number) =>
@@ -25,7 +26,7 @@ const fmt = (seconds: number) =>
 export default function ProblemPage({
   problem,
   startedAt,
-  revealedHints,
+  viewedHints,
   solved,
   draft,
   language,
@@ -40,9 +41,9 @@ export default function ProblemPage({
   onBack,
   onOpenLab,
 }: {
-  problem: Problem;
+  problem: ProblemSummary;
   startedAt: number | undefined;
-  revealedHints: number[];
+  viewedHints: HintOrdinal[];
   solved: boolean;
   draft: string | undefined;
   language: Language;
@@ -52,7 +53,8 @@ export default function ProblemPage({
   onTabChange: (tab: ProblemTab) => void;
   onLanguageChange: (language: Language) => void;
   onDraftChange: (value: string) => void;
-  onRevealHint: (index: number) => void;
+  /** Records the view on first call and resolves to the text; safe to repeat. */
+  onRevealHint: (ordinal: HintOrdinal) => Promise<string>;
   onReport: () => void;
   onBack: () => void;
   onOpenLab: () => void;
@@ -62,6 +64,19 @@ export default function ProblemPage({
     const t = window.setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+  // Hint text is never part of the problem: it comes from the data source after a view,
+  // and hints viewed earlier are fetched again when the page opens.
+  const [hintTexts, setHintTexts] = useState<Partial<Record<HintOrdinal, string>>>({});
+  const requested = useRef(new Set<HintOrdinal>());
+  function loadHint(ordinal: HintOrdinal) {
+    if (requested.current.has(ordinal)) return;
+    requested.current.add(ordinal);
+    onRevealHint(ordinal).then(
+      (text) => setHintTexts((t) => ({ ...t, [ordinal]: text })),
+      () => requested.current.delete(ordinal),
+    );
+  }
+  useEffect(() => viewedHints.forEach(loadHint), [viewedHints.join()]);
   return (
     <>
       <button className="text-button back-button" onClick={onBack}>
@@ -134,8 +149,9 @@ export default function ProblemPage({
                 mesmo se você sair desta tela. O cronômetro local é apenas demonstrativo.
               </p>
               {problem.hints.map((hint, i) => {
+                const ordinal = (i + 1) as HintOrdinal;
                 const remaining = remainingHintSeconds(hint, startedAt, now);
-                const revealed = revealedHints.includes(i);
+                const revealed = viewedHints.includes(ordinal);
                 return (
                   <div className="hint-card" key={i}>
                     <div>
@@ -146,12 +162,12 @@ export default function ProblemPage({
                       <span className="mono">{remaining > 0 ? fmt(remaining) : 'Disponível'}</span>
                     </div>
                     {revealed ? (
-                      <p>{hint.text}</p>
+                      <p>{hintTexts[ordinal] ?? 'Carregando dica…'}</p>
                     ) : (
                       <button
                         className="button secondary full"
                         disabled={remaining > 0}
-                        onClick={() => onRevealHint(i)}
+                        onClick={() => loadHint(ordinal)}
                       >
                         {remaining ? <LockKeyhole size={15} /> : <Lightbulb size={15} />}
                         {remaining ? `Libera após ${hint.afterSeconds / 60} min` : 'Revelar dica'}

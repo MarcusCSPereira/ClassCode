@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Lightbulb, Plus, Search } from 'lucide-react';
 import { modules } from '../lib/catalog';
-import type { Problem } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 import ProblemList from '../components/ProblemList';
 export default function ProblemsPage({
   problems: all,
@@ -10,11 +10,11 @@ export default function ProblemsPage({
   onCreateProblem,
   onOpenProblem,
 }: {
-  problems: Problem[];
+  problems: ProblemSummary[];
   solved: string[];
   teacher: boolean;
   onCreateProblem: () => void;
-  onOpenProblem: (p: Problem) => void;
+  onOpenProblem: (p: ProblemSummary) => void;
 }) {
   const [query, setQuery] = useState('');
   return (

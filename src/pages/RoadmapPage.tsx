@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Map } from 'lucide-react';
 import { modules } from '../lib/catalog';
-import type { Module, Problem } from '../lib/types';
+import type { Module } from '../lib/types';
+import type { ProblemSummary } from '../data/repository';
 import ModuleCard from '../components/ModuleCard';
 export default function RoadmapPage({
   problems: all,
   solved,
   onSelectTopic,
 }: {
-  problems: Problem[];
+  problems: ProblemSummary[];
   solved: string[];
   onSelectTopic: (m: Module) => void;
 }) {

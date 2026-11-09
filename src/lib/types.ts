@@ -36,8 +36,34 @@ export interface Classroom {
   code: string;
   teacher: string;
   term: string;
+  /** Generated demo data with no real students; the UI must say so. */
+  fictitious?: boolean;
 }
+export type HintOrdinal = 1 | 2 | 3;
+export interface HintView {
+  ordinal: HintOrdinal;
+  viewedAt: number;
+}
+export interface ProgressReport {
+  evidence: string;
+  reportedAt: number;
+}
+/** Demo persistence. Version 2 keeps the timestamps that metrics and progression need. */
 export interface DemoState {
+  version: 2;
+  role: Role;
+  name: string;
+  joinedClassIds: string[];
+  joinedAt: Record<string, number>;
+  classes: Classroom[];
+  customProblems: Problem[];
+  startedAt: Record<string, number>;
+  drafts: Record<string, string>;
+  hintViews: Record<string, HintView[]>;
+  reports: Record<string, ProgressReport>;
+}
+/** Shape saved by the first demo release; migrated on read. */
+export interface DemoStateV1 {
   version: 1;
   role: Role;
   name: string;

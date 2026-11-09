@@ -4,7 +4,7 @@ Data de partida: **02/11/2026**. Meta de planejamento: **15/11/2026**, adotada c
 
 ## Resultado esperado para a apresentação
 
-Um professor autenticado cria uma turma e uma questão. Um aluno em outro navegador entra pelo código, acessa a questão, recebe dicas no tempo correto, resolve no judge externo e registra evidência. O professor vê o progresso da própria turma. Uma visualização permite explicar o algoritmo durante a apresentação.
+Um professor autenticado cria uma turma e uma questão. Um aluno em outro navegador entra pelo código, acessa a questão, recebe dicas no tempo correto, resolve no judge externo e registra evidência. A trilha recomenda automaticamente o próximo passo conforme o aluno conclui módulos e usa dicas. O professor vê métricas de uso da própria turma. Uma visualização permite explicar o algoritmo durante a apresentação.
 
 **Escopo comprometido proposto:** autenticação, isolamento entre turmas, publicação padronizada, dicas pelo relógio do servidor, progresso persistente e judge externo. **Extensão condicionada:** execução interna com Judge0. As datas abaixo são metas, não confirmação de trabalho já concluído.
 
@@ -19,6 +19,8 @@ Um professor autenticado cria uma turma e uma questão. Um aluno em outro navega
 - Documentação, testes automatizados, CI e workflow de publicação.
 
 ## Cronograma por entrega
+
+O detalhamento de 03/11 a 12/11, dividido nas frentes Plataforma e Pedagógica, está em [ENTREGA-2.md](ENTREGA-2.md#9-cronograma-da-entrega).
 
 | Período | Entrega | Critério para avançar |
 | --- | --- | --- |
@@ -46,13 +48,26 @@ Até 09/11, se autenticação, matrícula e publicação ainda não estiverem in
 | CC-05 | P0 | Criar rascunho de questão, configurar três dicas via RPC, publicar depois de validar; editar e arquivar com confirmação | CC-04 |
 | CC-06 | P0 | Iniciar tentativa de forma idempotente; buscar dicas por RPC; nenhum conteúdo de dica bloqueada no payload/JS de produção | CC-05 |
 | CC-07 | P0 | Persistir evidência/reflexão autodeclarada; diferenciar pendência de revisão e Accepted; reabrir desafio | CC-06 |
-| CC-08 | P0 | Relatório da turma com nomes, tentativas, conclusões declaradas e ajuda utilizada; RLS para leitura do proprietário; exportação CSV | CC-07 |
+| CC-08 | P0 | Relatório da turma com nomes, tentativas, conclusões declaradas e ajuda utilizada; RLS para leitura do proprietário; exportação CSV. **Desdobrado em CC-17, CC-18 e CC-19** | CC-07 |
 | CC-09 | P0 | Testar dois professores, dois alunos e um intruso; testar REST direto, hints antes/depois e publicação incompleta no Supabase real | CC-04 a CC-08 |
 | CC-10 | P0 | Homologar fluxo em celular/teclado, revisar contraste, erros, carregamento e estado vazio; apresentação reproduzível | CC-09 |
 | CC-11 | P1 | Ampliar fundamentos com questões autorais revisadas e soluções de referência em três linguagens; conferir limites e exemplos | CC-05 |
 | CC-12 | P1 | Associar visualização a um tópico/questão e permitir previsão/explicação do aluno; manter replay determinístico | CC-06 |
 | CC-13 | P2 | Implementar gateway de submissão e worker Judge0 para uma questão e linguagem; idempotência, quotas e polling | CC-09 |
 | CC-14 | P2 | Adicionar Python/Java/C++, casos privados e agregação de vereditos; testes de timeout, erro de compilação e memória | CC-13 |
+
+Itens adicionados na Entrega 2. Regras, contratos e critérios completos em [ENTREGA-2.md](ENTREGA-2.md#8-backlog-da-entrega-2).
+
+| ID | Prioridade | Entrega e critério de aceite | Dependências |
+| --- | --- | --- | --- |
+| CC-00 | P0 | Dividir `App.tsx` em páginas e criar a interface de repositório com `DemoRepository`, sem mudança visível. **Concluído em 02/11** | Nenhuma |
+| CC-15 | P0 | Motor de progressão: autonomia, estados de módulo e próximo passo recomendado, com testes. **Concluído em 02/11** | Nenhuma |
+| CC-16 | P0 | Trilha adaptativa na UI do aluno: estados, recomendação com motivo e meta derivada. **Concluído em 02/11 no modo demo** | CC-00, CC-15 |
+| CC-17 | P0 | Cálculo das métricas e sinais de atenção, com testes. **Concluído em 02/11** | Nenhuma |
+| CC-18 | P0 | RPCs `classroom_activity` e `my_activity` em migration nova, com testes de negação | CC-01 |
+| CC-19 | P0 | Painel de métricas do professor com mapa aluno × questão e CSV. **Concluído em 02/11 no modo demo** | CC-00, CC-17, CC-18 |
+| CC-20 | P0 | Trilha base no servidor e importação idempotente para a turma | CC-05 |
+| CC-21 | P1 | Turma fictícia no modo demo para demonstrar o painel, identificada como tal. **Concluído em 02/11** | CC-19 |
 
 P0 é o MVP; P1 melhora a experiência quando o fluxo estiver estável; P2 não bloqueia a apresentação. Cada integrante assume uma entrega ou grupo coerente conforme disponibilidade, sem pressupor uma equipe específica.
 
@@ -87,6 +102,8 @@ A primeira implantação institucional é para uma instituição por projeto/dep
 - [ ] Progresso e evidências persistem após logout/login.
 - [ ] “Autodeclarado”, “revisado” e “Accepted” não são confundidos.
 - [ ] Interface de professor mostra progresso apenas dos seus alunos.
+- [ ] A trilha recomenda o próximo passo com motivo e se atualiza quando o aluno conclui um módulo.
+- [ ] O professor vê métricas por aluno e por questão, com sinais de atenção, sem tratá-las como nota.
 - [ ] Testes do backend real e do frontend passam.
 - [ ] Roteiro da apresentação roda com dados preparados, sem credenciais no repositório.
 
@@ -107,6 +124,6 @@ A primeira implantação institucional é para uma instituição por projeto/dep
 2. Professor cria turma e publica questão com objetivo e dicas (2 min).
 3. Aluno entra, escreve rascunho e consulta ajuda já liberada em uma tentativa preparada (2 min).
 4. Visualização de busca binária com previsão do próximo passo (1 min).
-5. Evidência e relatório do professor; o que já funciona e próxima extensão (1–2 min).
+5. Evidência e relatório do professor: sinais de atenção, questões que mais exigiram ajuda e CSV; o que já funciona e próxima extensão (1–2 min). Sem turma real com alunos, usar a "Turma de demonstração · dados fictícios" e dizer que é fictícia.
 
 Não manipular relógio ou esconder limites durante a demonstração. Para apresentar dicas sem esperar 12 minutos, preparar uma tentativa antes ou usar um ambiente de teste explicitamente identificado.

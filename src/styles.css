@@ -1288,6 +1288,49 @@ main {
 .lab-notes .info-strip p {
   font-size: 10px;
 }
+.lab-association {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.lab-association > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lab-association > p {
+  font-size: 12px;
+  color: #63708a;
+  line-height: 1.7;
+}
+.lab-reflection {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0 10px;
+}
+.lab-reflection label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: #5d639a;
+}
+.lab-reflection textarea {
+  background: #fff;
+  border: 1px solid #cccfea;
+  border-radius: 6px;
+  width: 100%;
+  padding: 12px;
+  color: #323979;
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 108px;
+}
+.lab-reflection textarea::placeholder {
+  color: #9ea2c2;
+}
 .visualizer {
   padding: 25px;
 }
@@ -2547,6 +2590,9 @@ main {
     grid-row: 2/4;
     margin: 0;
   }
+  .lab-reflection {
+    grid-column: 1;
+  }
   .lab-notes .button {
     grid-column: 1/-1;
   }
@@ -3573,8 +3619,10 @@ main {
 :root[data-theme='dark'] .list-header,
 :root[data-theme='dark'] .info-strip,
 :root[data-theme='dark'] .empty,
+:root[data-theme='dark'] .lab-association > p,
 :root[data-theme='dark'] .lab-notes > p,
 :root[data-theme='dark'] .lab-notes li,
+:root[data-theme='dark'] .lab-reflection label,
 :root[data-theme='dark'] .visual-toolbar > label,
 :root[data-theme='dark'] .visual-heading,
 :root[data-theme='dark'] .target-field,
@@ -3632,6 +3680,7 @@ main {
 :root[data-theme='dark'] .card,
 :root[data-theme='dark'] .progress-ring > div,
 :root[data-theme='dark'] .segmented button.selected,
+:root[data-theme='dark'] .lab-reflection textarea,
 :root[data-theme='dark'] .target-field input,
 :root[data-theme='dark'] .modal {
   background: var(--surface);
@@ -3675,6 +3724,7 @@ main {
 :root[data-theme='dark'] .roadmap-banner,
 :root[data-theme='dark'] .segmented,
 :root[data-theme='dark'] .info-strip,
+:root[data-theme='dark'] .lab-reflection textarea,
 :root[data-theme='dark'] .visual-toolbar select,
 :root[data-theme='dark'] .array-cell,
 :root[data-theme='dark'] .array-item.active .array-cell,
@@ -3692,6 +3742,7 @@ main {
 :root[data-theme='dark'] .segmented button.selected,
 :root[data-theme='dark'] .search-field input,
 :root[data-theme='dark'] .empty h3,
+:root[data-theme='dark'] .lab-reflection textarea,
 :root[data-theme='dark'] .form-stack input,
 :root[data-theme='dark'] .form-stack textarea,
 :root[data-theme='dark'] .form-stack select {
@@ -3719,6 +3770,7 @@ main {
 :root[data-theme='dark'] .tabs .selected,
 :root[data-theme='dark'] .code-toolbar select,
 :root[data-theme='dark'] .modal,
+:root[data-theme='dark'] .lab-reflection textarea,
 :root[data-theme='dark'] .form-stack input,
 :root[data-theme='dark'] .form-stack textarea,
 :root[data-theme='dark'] .form-stack select,
@@ -3878,6 +3930,7 @@ main {
 :root[data-theme='dark'] .modal::backdrop {
   background: #060811bb;
 }
+:root[data-theme='dark'] .lab-reflection textarea::placeholder,
 :root[data-theme='dark'] .form-stack input::placeholder,
 :root[data-theme='dark'] .form-stack textarea::placeholder,
 :root[data-theme='dark'] .search-field input::placeholder {

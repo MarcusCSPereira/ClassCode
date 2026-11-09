@@ -39,6 +39,45 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 09/11/2026 · `feat/entrega-3-mvp` · Codex · CC-12
+
+**Itens do backlog:** CC-12 (concluído no modo demo)
+
+**Feito**
+
+- O laboratório visual agora associa cada replay a um tópico e a um desafio do catálogo em [`src/lib/visualLabs.ts`](src/lib/visualLabs.ts): busca binária ↔ `search` / `binary`; bubble sort ↔ `complexity` / `distinct`.
+- [`src/components/Visualizer.tsx`](src/components/Visualizer.tsx) passou a consumir a definição da visualização selecionada, mantendo o replay determinístico e expondo o quadro atual para a página registrar reflexão por passo.
+- [`src/pages/LabPage.tsx`](src/pages/LabPage.tsx) ganhou contexto pedagógico da experiência selecionada, com campos locais de **previsão** e **explicação** por quadro, salvos em `localStorage`.
+- Ao abrir o laboratório a partir de um desafio, o app mantém o contexto e já destaca a visualização correspondente em [`src/App.tsx`](src/App.tsx).
+- Novo teste unitário [`src/lib/visualLabs.test.ts`](src/lib/visualLabs.test.ts) garante que as associações existem e que o replay segue determinístico.
+- [`src/styles.css`](src/styles.css) foi ajustado para acomodar os novos blocos de associação e reflexão, incluindo tema escuro.
+
+**Estado verificado**
+
+- `npm run typecheck`: passou.
+- `npx vitest run src/lib/visualLabs.test.ts src/lib/domain.test.ts`: passou.
+- Não executado: `npm run test:e2e` e `npm run check`; a entrega alterou a UI, mas foquei na validação unitária do comportamento novo.
+
+**Decisões tomadas**
+
+- As reflexões do laboratório ficaram locais ao navegador e fora do `Repository`, porque o backlog não pede persistência remota para CC-12.
+- O vínculo entre visualização e desafio foi centralizado em `src/lib/visualLabs.ts`, para evitar espalhar regras pela UI e preservar o replay determinístico.
+
+**Ficou de fora / limites conhecidos**
+
+- A previsão/explicação ainda não entra em relatório do professor nem em exportação.
+- Só os desafios `binary` e `distinct` possuem visualização associada; os demais continuam abrindo o laboratório no replay padrão de busca binária.
+- Não houve teste E2E cobrindo a escrita das reflexões no navegador.
+
+**Próximo passo esperado**
+
+1. **CC-03 ou CC-20:** retomar um item de plataforma pequeno, sem reabrir a tentativa de migrar toda a UI de uma vez.
+2. Se a frente pedagógica voltar ao laboratório, adicionar cenário E2E para abrir o laboratório a partir de `binary`, escrever reflexão e confirmar que o texto persiste ao navegar.
+
+**Bloqueios**
+
+- Nenhum para o CC-12 no modo demo.
+
 ### 09/11/2026 · `feat/entrega-3-mvp` · Codex · CC-18
 
 **Itens do backlog:** CC-18 (parcialmente concluído no banco local; falta homologar em PostgreSQL/Supabase real)

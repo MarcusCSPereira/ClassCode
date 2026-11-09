@@ -1,37 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Pause, Play, RotateCcw, ScanLine } from 'lucide-react';
-import { binaryFrames, bubbleFrames } from '../lib/algorithms';
-const codes = {
-  binary: [
-    'l = 0; r = n - 1',
-    'enquanto l ≤ r:',
-    '    meio = (l + r) // 2',
-    '    se vetor[meio] == alvo: retorne meio',
-    '    se vetor[meio] < alvo: l = meio + 1',
-    '    senão: r = meio - 1',
-    'retorne -1',
-  ],
-  bubble: [
-    'para i de 0 até n - 2:',
-    '    para j de 0 até n - i - 2:',
-    '        se vetor[j] > vetor[j + 1]:',
-    '            troque(vetor[j], vetor[j + 1])',
-    'retorne vetor',
-  ],
-};
-export default function Visualizer({ compact = false }: { compact?: boolean }) {
-  const [algorithm, setAlgorithm] = useState<'binary' | 'bubble'>('binary');
+import type { Frame } from '../lib/algorithms';
+import { getVisualLab, visualLabs, type VisualLabId } from '../lib/visualLabs';
+
+export default function Visualizer({
+  compact = false,
+  labId,
+  onLabChange,
+  onStepChange,
+}: {
+  compact?: boolean;
+  labId: VisualLabId;
+  onLabChange: (labId: VisualLabId) => void;
+  onStepChange?: (snapshot: { step: number; total: number; frame: Frame }) => void;
+}) {
   const [target, setTarget] = useState(19);
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1000);
-  const frames = useMemo(
-    () =>
-      algorithm === 'binary'
-        ? binaryFrames([2, 5, 8, 13, 19, 24, 31], target)
-        : bubbleFrames([24, 8, 19, 5, 31, 13, 2]),
-    [algorithm, target],
-  );
+  const lab = getVisualLab(labId);
+  const frames = useMemo(() => lab.buildFrames({ target }), [lab, target]);
   useEffect(() => {
     if (!playing) return;
     const timer = window.setInterval(
@@ -47,7 +35,18 @@ export default function Visualizer({ compact = false }: { compact?: boolean }) {
     );
     return () => clearInterval(timer);
   }, [playing, frames.length, speed]);
+
+  useEffect(() => {
+    setStep(0);
+    setPlaying(false);
+  }, [labId]);
+
   const frame = frames[Math.min(step, frames.length - 1)];
+
+  useEffect(() => {
+    onStepChange?.({ step, total: frames.length, frame });
+  }, [frame, frames.length, onStepChange, step]);
+
   function reset() {
     setStep(0);
     setPlaying(false);
@@ -57,24 +56,18 @@ export default function Visualizer({ compact = false }: { compact?: boolean }) {
       {!compact && (
         <div className="visual-toolbar">
           <div className="segmented">
-            <button
-              className={algorithm === 'binary' ? 'selected' : ''}
-              onClick={() => {
-                setAlgorithm('binary');
-                reset();
-              }}
-            >
-              Busca binária
-            </button>
-            <button
-              className={algorithm === 'bubble' ? 'selected' : ''}
-              onClick={() => {
-                setAlgorithm('bubble');
-                reset();
-              }}
-            >
-              Bubble sort
-            </button>
+            {visualLabs.map((option) => (
+              <button
+                key={option.id}
+                className={labId === option.id ? 'selected' : ''}
+                onClick={() => {
+                  onLabChange(option.id);
+                  reset();
+                }}
+              >
+                {option.title}
+              </button>
+            ))}
           </div>
           <label>
             Velocidade{' '}
@@ -88,11 +81,11 @@ export default function Visualizer({ compact = false }: { compact?: boolean }) {
       )}
       <div className="visual-heading">
         <span>
-          <ScanLine size={17} /> {algorithm === 'binary' ? 'Busca binária' : 'Bubble sort'}
+          <ScanLine size={17} /> {lab.title}
         </span>
-        <span className="mono">{algorithm === 'binary' ? 'O(log n)' : 'O(n²)'}</span>
+        <span className="mono">{lab.complexity}</span>
       </div>
-      {!compact && algorithm === 'binary' && (
+      {!compact && labId === 'binary' && (
         <label className="target-field">
           Valor a encontrar{' '}
           <input
@@ -113,12 +106,12 @@ export default function Visualizer({ compact = false }: { compact?: boolean }) {
           >
             <div
               className="array-cell"
-              style={algorithm === 'bubble' ? { height: `${40 + v * 3}px` } : {}}
+              style={labId === 'bubble' ? { height: `${40 + v * 3}px` } : {}}
             >
               {v}
             </div>
             <span>{i}</span>
-            {frame.active.includes(i) && <small>{algorithm === 'binary' ? 'meio' : '↑'}</small>}
+            {frame.active.includes(i) && <small>{labId === 'binary' ? 'meio' : '↑'}</small>}
           </div>
         ))}
       </div>
@@ -127,7 +120,7 @@ export default function Visualizer({ compact = false }: { compact?: boolean }) {
       </p>
       {!compact && (
         <div className="pseudocode">
-          {codes[algorithm].map((line, i) => (
+          {lab.pseudocode.map((line, i) => (
             <div key={line} className={frame.line === i ? 'highlight' : ''}>
               <span>{i + 1}</span>
               <code>{line}</code>

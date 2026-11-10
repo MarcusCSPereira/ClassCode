@@ -5,6 +5,12 @@
  */
 import type { Classroom, HintOrdinal, Problem } from '../lib/types';
 
+export interface UserProfile {
+  id: string;
+  displayName: string;
+  role: 'student' | 'teacher';
+}
+
 /** A problem as the student receives it: release times only, never the hint text. */
 export type ProblemSummary = Omit<Problem, 'hints'> & { hints: { afterSeconds: number }[] };
 /** What the teacher submits; the data source assigns id and source. */
@@ -68,9 +74,11 @@ export function describeError(error: unknown): string {
 
 export interface ClassCodeRepository {
   readonly mode: 'demo' | 'remote';
+  getProfile(): Promise<UserProfile>;
   listClassrooms(): Promise<Classroom[]>;
   createClassroom(name: string, term: string): Promise<{ id: string; code: string }>;
   joinClassroom(code: string): Promise<string>;
+  importBaseTrail(classroomId: string): Promise<number>;
   listProblems(): Promise<ProblemSummary[]>;
   publishProblem(problem: NewProblem): Promise<string>;
   /** Idempotent; resolves to the original start time. */

@@ -19,6 +19,32 @@ const activityPayload = [
   },
 ];
 
+const classroomPayload = {
+  id: 'class-1',
+  name: 'Algoritmos',
+  code: 'ABC123',
+  teacher: 'Professora Ada',
+  term: '2026.2',
+};
+
+const problemPayload = {
+  id: 'problem-1',
+  moduleId: 'foundations',
+  title: 'Soma',
+  difficulty: 'Básico' as const,
+  minutes: 10,
+  objective: 'Somar dois números.',
+  statement: 'Leia e some.',
+  input: 'a b',
+  output: 'a + b',
+  constraints: '0 ≤ a, b ≤ 10',
+  exampleInput: '1 2',
+  exampleOutput: '3',
+  source: 'Professora Ada',
+  authorClassId: 'class-1',
+  hints: [{ afterSeconds: 180 }, { afterSeconds: 420 }, { afterSeconds: 720 }],
+};
+
 describe('supabaseRepository', () => {
   it('converte o payload de my_activity para ActivityRow[]', () => {
     expect(parseActivityRowsPayload(activityPayload)).toEqual([
@@ -110,6 +136,98 @@ describe('supabaseRepository', () => {
     });
     expect(rpc).toHaveBeenNthCalledWith(1, 'my_activity');
     expect(rpc).toHaveBeenNthCalledWith(2, 'classroom_activity', { cid: 'class-1' });
+  });
+
+  it('implementa perfil, turmas e importação da trilha pelo contrato remoto', async () => {
+    const rpc = vi
+      .fn<SupabaseRpcClient['rpc']>()
+      .mockResolvedValueOnce({
+        data: { id: 'teacher-1', displayName: 'Professora Ada', role: 'teacher' },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: [classroomPayload], error: null })
+      .mockResolvedValueOnce({ data: { id: 'class-2', code: 'XYZ789' }, error: null })
+      .mockResolvedValueOnce({ data: 'class-2', error: null })
+      .mockResolvedValueOnce({ data: 7, error: null });
+    const repo = createSupabaseRepository({ rpc });
+
+    await expect(repo.getProfile()).resolves.toEqual({
+      id: 'teacher-1',
+      displayName: 'Professora Ada',
+      role: 'teacher',
+    });
+    await expect(repo.listClassrooms()).resolves.toEqual([classroomPayload]);
+    await expect(repo.createClassroom('Estruturas', '2026.2')).resolves.toEqual({
+      id: 'class-2',
+      code: 'XYZ789',
+    });
+    await expect(repo.joinClassroom('xyz789')).resolves.toBe('class-2');
+    await expect(repo.importBaseTrail('class-2')).resolves.toBe(7);
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'my_profile');
+    expect(rpc).toHaveBeenNthCalledWith(2, 'list_classrooms');
+    expect(rpc).toHaveBeenNthCalledWith(3, 'create_classroom', {
+      class_name: 'Estruturas',
+      class_term: '2026.2',
+    });
+    expect(rpc).toHaveBeenNthCalledWith(4, 'join_classroom', { invite_code: 'xyz789' });
+    expect(rpc).toHaveBeenNthCalledWith(5, 'import_base_trail', { cid: 'class-2' });
+  });
+
+  it('lista, publica e atualiza questões e progresso pelo servidor', async () => {
+    const rpc = vi
+      .fn<SupabaseRpcClient['rpc']>()
+      .mockResolvedValueOnce({ data: [problemPayload], error: null })
+      .mockResolvedValueOnce({ data: 'problem-2', error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+    const repo = createSupabaseRepository({ rpc });
+    const newProblem = {
+      ...problemPayload,
+      hints: [
+        { afterSeconds: 180, text: 'Dica 1' },
+        { afterSeconds: 420, text: 'Dica 2' },
+        { afterSeconds: 720, text: 'Dica 3' },
+      ],
+    };
+    const { id: _id, source: _source, ...payload } = newProblem;
+
+    await expect(repo.listProblems()).resolves.toEqual([problemPayload]);
+    await expect(repo.publishProblem(payload)).resolves.toBe('problem-2');
+    await expect(
+      repo.reportProgress('problem-1', 'Validado externamente.'),
+    ).resolves.toBeUndefined();
+    await expect(repo.reopenProblem('problem-1')).resolves.toBeUndefined();
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'list_problems');
+    expect(rpc).toHaveBeenNthCalledWith(2, 'publish_problem', { payload });
+    expect(rpc).toHaveBeenNthCalledWith(3, 'report_progress', {
+      pid: 'problem-1',
+      report_evidence: 'Validado externamente.',
+    });
+    expect(rpc).toHaveBeenNthCalledWith(4, 'reopen_problem', { pid: 'problem-1' });
+  });
+
+  it('rejeita payloads remotos que expõem formato incompleto ou inválido', async () => {
+    const invalidProblems = createSupabaseRepository({
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ ...problemPayload, hints: [{ afterSeconds: 180, text: 'não deveria vir' }] }],
+        error: null,
+      }),
+    });
+    const invalidProfile = createSupabaseRepository({
+      rpc: vi.fn().mockResolvedValue({
+        data: { id: 'user-1', displayName: 'Pessoa', role: 'admin' },
+        error: null,
+      }),
+    });
+
+    await expect(invalidProblems.listProblems()).rejects.toThrow(
+      'Resposta inválida do backend em problems[0].hints',
+    );
+    await expect(invalidProfile.getProfile()).rejects.toThrow(
+      'Resposta inválida do backend em my_profile.role',
+    );
   });
 
   it('inicia uma tentativa pelo servidor e preserva o horário retornado', async () => {

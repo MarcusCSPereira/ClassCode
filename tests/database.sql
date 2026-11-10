@@ -22,6 +22,10 @@ select public.test_assert(not has_table_privilege('authenticated','public.attemp
 select public.test_assert(not has_function_privilege('anon','public.get_hint(uuid,integer)','execute'),'anonymous hint access denied');
 select public.test_assert(not has_function_privilege('anon','public.my_activity()','execute'),'anonymous my_activity denied');
 select public.test_assert(not has_function_privilege('anon','public.classroom_activity(uuid)','execute'),'anonymous classroom activity denied');
+select public.test_assert(not has_function_privilege('anon','public.my_profile()','execute'),'anonymous profile access denied');
+select public.test_assert(not has_function_privilege('anon','public.list_classrooms()','execute'),'anonymous classroom list denied');
+select public.test_assert(not has_function_privilege('anon','public.list_problems()','execute'),'anonymous problem list denied');
+select public.test_assert(not has_function_privilege('anon','public.import_base_trail(uuid)','execute'),'anonymous base import denied');
 do $$ begin
   begin perform public.create_classroom('Invalid','2026.2'); raise exception 'student created classroom'; exception when insufficient_privilege then null; end;
 end; $$;
@@ -62,6 +66,13 @@ select public.test_assert((:'my_activity'::jsonb->0->>'problemId')=:'pid','my_ac
 select public.test_assert((:'my_activity'::jsonb->0->'hintViews'->0->>'ordinal')='1','my_activity includes revealed hints');
 select public.test_assert((:'my_activity'::jsonb->0->>'verification')='self_reported','my_activity includes self report verification');
 select public.test_assert((:'my_activity'::jsonb->0->>'evidence')='Conferido com o professor.','my_activity includes reported evidence');
+select public.report_progress(:'pid','Evidência atualizada pela RPC.');
+select public.my_activity() as updated_activity \gset
+select public.test_assert((:'updated_activity'::jsonb->0->>'evidence')='Evidência atualizada pela RPC.','report_progress updates evidence');
+select public.reopen_problem(:'pid');
+select public.my_activity() as reopened_activity \gset
+select public.test_assert((:'reopened_activity'::jsonb->0->>'reportedAt') is null,'reopen_problem removes the report');
+select public.report_progress(:'pid','Conferido com o professor.');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
 do $$ begin
   begin perform public.classroom_activity(current_setting('test.cid')::uuid); raise exception 'other teacher read classroom activity'; exception when insufficient_privilege then null; end;
@@ -82,4 +93,45 @@ select public.test_assert((:'classroom_activity'::jsonb->'activity'->0->>'studen
 select public.test_assert((:'classroom_activity'::jsonb->'activity'->0->>'verification')='self_reported','classroom activity includes verification');
 reset role;
 select public.test_assert((select count(*) from private.hint_views)=1,'hint view recorded once');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.my_profile() as teacher_profile \gset
+select public.test_assert((:'teacher_profile'::jsonb->>'role')='teacher','my_profile returns the server role');
+select result->>'id' as imported_cid, result->>'code' as imported_code
+  from (select public.create_classroom('Trilha remota','2026.2') result) q \gset
+select public.test_assert(public.import_base_trail(:'imported_cid'::uuid)=7,'base trail imports seven problems');
+select public.test_assert(public.import_base_trail(:'imported_cid'::uuid)=0,'base trail import is idempotent');
+select public.list_classrooms() as teacher_classrooms \gset
+select public.test_assert(jsonb_array_length(:'teacher_classrooms'::jsonb)=2,'teacher lists owned classrooms');
+reset role;
+select public.test_assert((select count(*) from private.classroom_base_imports where classroom_id=:'imported_cid')=7,'base import mapping is complete');
+set role authenticated;
+select public.list_problems() as teacher_problems \gset
+select public.test_assert(jsonb_array_length(:'teacher_problems'::jsonb)=8,'teacher lists published problems without hint text');
+select public.test_assert(not (:'teacher_problems'::jsonb->0->'hints'->0 ? 'text'),'problem list never exposes hint content');
+do $$ begin
+  begin
+    perform public.publish_problem(jsonb_build_object(
+      'authorClassId',(select id from public.classrooms where name='Trilha remota'),
+      'hints','invalid'
+    ));
+    raise exception 'malformed problem accepted';
+  exception when others then
+    if sqlerrm <> 'invalid_problem' then raise; end if;
+  end;
+end; $$;
+select public.publish_problem(jsonb_build_object(
+  'authorClassId',:'imported_cid','moduleId','foundations','title','Questão remota',
+  'difficulty','Básico','minutes',10,'objective','Testar publicação','statement','Resolva.',
+  'input','n','output','n','constraints','0 ≤ n ≤ 10','exampleInput','1','exampleOutput','1',
+  'hints',jsonb_build_array(jsonb_build_object('text','D1'),jsonb_build_object('text','D2'),jsonb_build_object('text','D3'))
+)) as remote_pid \gset
+select public.test_assert((select published from public.problems where id=:'remote_pid'),'publish_problem completes the draft transaction');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.join_classroom(:'imported_code');
+select public.list_classrooms() as student_classrooms \gset
+select public.test_assert((select value->>'code' from jsonb_array_elements(:'student_classrooms'::jsonb) value where value->>'id'=:'imported_cid')='','student never receives invite code');
+select public.list_problems() as student_problems \gset
+select public.test_assert(jsonb_array_length(:'student_problems'::jsonb)=8,'student lists only problems from joined classroom');
+reset role;
 select 'Database assertions passed' as result;

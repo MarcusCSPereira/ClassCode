@@ -6,10 +6,12 @@ import type { NewProblem } from '../data/repository';
 export default function ProblemEditor({
   classes,
   onSave,
+  remote = false,
 }: {
   classes: Classroom[];
   /** Resolves to an error message, or null after publishing. */
   onSave: (p: NewProblem) => Promise<string | null>;
+  remote?: boolean;
 }) {
   const [error, setError] = useState('');
   return (
@@ -49,7 +51,8 @@ export default function ProblemEditor({
     >
       <p className="helper">
         Um padrão para todos os desafios: objetivo, enunciado, exemplos e três dicas progressivas. A
-        publicação acontece apenas neste navegador.
+        publicação{' '}
+        {remote ? 'será persistida na turma selecionada.' : 'acontece apenas neste navegador.'}
       </p>
       <label>
         Título
@@ -143,7 +146,7 @@ export default function ProblemEditor({
         </p>
       )}
       <button type="submit" className="button primary">
-        Publicar desafio na demonstração
+        {remote ? 'Publicar desafio na turma' : 'Publicar desafio na demonstração'}
       </button>
     </form>
   );

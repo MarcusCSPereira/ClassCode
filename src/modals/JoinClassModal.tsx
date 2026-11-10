@@ -3,10 +3,12 @@ import Modal from '../components/Modal';
 export default function JoinClassModal({
   onJoin,
   onClose,
+  remote = false,
 }: {
   /** Resolves to an error message for the code field, or null after joining. */
   onJoin: (code: string) => Promise<string | null>;
   onClose: () => void;
+  remote?: boolean;
 }) {
   return (
     <Modal title="Encontre a sua turma" onClose={onClose}>
@@ -23,16 +25,17 @@ export default function JoinClassModal({
         }}
       >
         <p className="helper">
-          Digite o código enviado pelo professor. Na demonstração, use CLASS26 ou o código de uma
-          turma criada neste navegador.
+          {remote
+            ? 'Digite o código de convite enviado pelo professor.'
+            : 'Digite o código enviado pelo professor. Na demonstração, use CLASS26 ou o código de uma turma criada neste navegador.'}
         </p>
         <label>
           Código da turma
           <input
             name="code"
             required
-            placeholder="Ex.: CLASS26"
-            maxLength={20}
+            placeholder={remote ? 'Cole o código recebido' : 'Ex.: CLASS26'}
+            maxLength={remote ? 64 : 20}
             onInput={(e) => e.currentTarget.setCustomValidity('')}
             autoComplete="off"
           />

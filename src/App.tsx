@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import {
   ArrowRight,
   ChartNoAxesCombined,
@@ -18,9 +19,14 @@ import {
   Waypoints,
   X,
 } from 'lucide-react';
-import { demoStore, repository } from './data';
+import { dataConfigurationError, dataMode, demoStore, repository, supabase } from './data';
 import { FICTITIOUS_CLASS } from './data/fictitiousClass';
-import { describeError, RepositoryError, type ProblemSummary } from './data/repository';
+import {
+  describeError,
+  RepositoryError,
+  type ProblemSummary,
+  type UserProfile,
+} from './data/repository';
 import type { ActivityRow } from './data/repository';
 import { modules, problems } from './lib/catalog';
 import { downloadJson, visibleProblems } from './lib/domain';
@@ -29,6 +35,7 @@ import { pageNames, problemIdFromHash, readPage, type Page } from './lib/navigat
 import type { Language, Module, Role } from './lib/types';
 import { useTheme } from './lib/useTheme';
 import Modal from './components/Modal';
+import AuthPanel from './components/AuthPanel';
 import ProblemEditor from './components/ProblemEditor';
 import ClassesPage from './pages/ClassesPage';
 import LabPage from './pages/LabPage';
@@ -48,9 +55,17 @@ type ModalName = 'join' | 'profile' | 'create-class' | 'create-problem' | 'help'
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
-  // Reads still come from the local snapshot; CC-03 moves them to repository calls.
   const state = useSyncExternalStore(demoStore.subscribe, demoStore.getSnapshot);
   const storageError = demoStore.storageError();
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(dataMode === 'remote');
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [remoteClasses, setRemoteClasses] = useState<
+    Awaited<ReturnType<typeof repository.listClassrooms>>
+  >([]);
+  const [remoteProblems, setRemoteProblems] = useState<ProblemSummary[]>([]);
+  const [remoteLoading, setRemoteLoading] = useState(dataMode === 'remote');
+  const [activity, setActivity] = useState<ActivityRow[] | null>(null);
   const [page, setPage] = useState<Page>(readPage);
   const [activeProblem, setActiveProblem] = useState<ProblemSummary>(
     () =>
@@ -66,17 +81,77 @@ export default function App() {
   const [problemTab, setProblemTab] = useState<ProblemTab>('statement');
   const [visualContextProblemId, setVisualContextProblemId] = useState<string | null>(null);
   const fail = (error: unknown) => setNotice(describeError(error));
+  const refreshRemote = useCallback(async () => {
+    if (dataMode !== 'remote' || !session) return;
+    setRemoteLoading(true);
+    try {
+      const [nextProfile, nextClasses, nextProblems, nextActivity] = await Promise.all([
+        repository.getProfile(),
+        repository.listClassrooms(),
+        repository.listProblems(),
+        repository.myActivity(),
+      ]);
+      setProfile(nextProfile);
+      setRemoteClasses(nextClasses);
+      setRemoteProblems(nextProblems);
+      setActivity(nextActivity);
+    } catch (error) {
+      fail(error);
+    } finally {
+      setRemoteLoading(false);
+    }
+  }, [session]);
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      setAuthLoading(false);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthLoading(false);
+      if (!nextSession) {
+        setProfile(null);
+        setRemoteClasses([]);
+        setRemoteProblems([]);
+        setActivity(null);
+      }
+    });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+  useEffect(() => {
+    void refreshRemote();
+  }, [refreshRemote]);
+  const teacher = dataMode === 'remote' ? profile?.role === 'teacher' : state.role === 'teacher';
+  const name = dataMode === 'remote' ? (profile?.displayName ?? 'Estudante') : state.name;
+  const all = useMemo(
+    () => (dataMode === 'remote' ? remoteProblems : visibleProblems(problems, state)),
+    [remoteProblems, state],
+  );
+  const myClasses =
+    dataMode === 'remote'
+      ? remoteClasses
+      : state.classes.filter((c) => teacher || state.joinedClassIds.includes(c.id));
+  const activityByProblem = useMemo(
+    () => Object.fromEntries((activity ?? []).map((row) => [row.problemId, row])),
+    [activity],
+  );
   useEffect(() => {
     const handle = () => {
       const current = readPage();
       setPage(current);
       if (current === 'problem') {
-        const p = visibleProblems(problems, demoStore.getSnapshot()).find(
-          (p) => p.id === problemIdFromHash(),
-        );
+        const p = all.find((problem) => problem.id === problemIdFromHash());
         if (p) {
           setActiveProblem(p);
-          repository.startAttempt(p.id).catch(fail);
+          repository.startAttempt(p.id).then(() => {
+            if (dataMode === 'remote') void refreshRemote();
+          }, fail);
         } else {
           setPage('problems');
           location.hash = 'problems';
@@ -86,15 +161,15 @@ export default function App() {
     handle();
     window.addEventListener('hashchange', handle);
     return () => window.removeEventListener('hashchange', handle);
-  }, []);
+  }, [all]);
   useEffect(() => {
     if (!notice) return;
     const t = window.setTimeout(() => setNotice(''), 5000);
     return () => clearTimeout(t);
   }, [notice]);
   // The trail reacts to attempts, hint views and reports; drafts and names do not affect it.
-  const [activity, setActivity] = useState<ActivityRow[] | null>(null);
   useEffect(() => {
+    if (dataMode === 'remote') return;
     let cancelled = false;
     repository.myActivity().then((rows) => {
       if (!cancelled) setActivity(rows);
@@ -103,8 +178,10 @@ export default function App() {
       cancelled = true;
     };
   }, [state.startedAt, state.hintViews, state.reports]);
-  const all = visibleProblems(problems, state);
-  const solved = Object.keys(state.reports);
+  const solved =
+    dataMode === 'remote'
+      ? (activity ?? []).filter((row) => row.reportedAt).map((row) => row.problemId)
+      : Object.keys(state.reports);
   const solvedCount = all.filter((p) => solved.includes(p.id)).length;
   const progress = moduleStatuses(modules, all, activity ?? []);
   const current = activity && currentModule(modules, progress);
@@ -113,10 +190,8 @@ export default function App() {
   // A new function when the activity changes makes the teacher panel reload.
   const loadClassroomActivity = useCallback(
     (classroomId: string) => repository.classroomActivity(classroomId),
-    [state.startedAt, state.hintViews, state.reports, state.name, state.joinedClassIds],
+    [activity, state.startedAt, state.hintViews, state.reports, state.name, state.joinedClassIds],
   );
-  const teacher = state.role === 'teacher';
-  const myClasses = state.classes.filter((c) => teacher || state.joinedClassIds.includes(c.id));
   function navigate(p: Page, problemId?: string) {
     const hash = p === 'problem' ? `problem/${problemId ?? activeProblem.id}` : p;
     if (location.hash.slice(1) !== hash) location.hash = hash;
@@ -129,7 +204,9 @@ export default function App() {
     setVisualContextProblemId(p.id);
     setActiveProblem(p);
     setProblemTab('statement');
-    repository.startAttempt(p.id).catch(fail);
+    repository.startAttempt(p.id).then(() => {
+      if (dataMode === 'remote') void refreshRemote();
+    }, fail);
     navigate('problem', p.id);
   }
   function announce(message: string) {
@@ -149,6 +226,25 @@ export default function App() {
     { page: 'visuals', label: 'Laboratório visual', Icon: Waypoints },
     { page: 'classes', label: 'Minhas turmas', Icon: Users },
   ];
+
+  if (dataConfigurationError)
+    return (
+      <main className="auth-shell">
+        <section className="card auth-card" role="alert">
+          <h1>Configuração incompleta</h1>
+          <p>{dataConfigurationError}</p>
+          <p className="helper">Revise o arquivo de ambiente e reinicie o servidor.</p>
+        </section>
+      </main>
+    );
+
+  if (dataMode === 'remote' && supabase && (authLoading || (session && remoteLoading && !profile)))
+    return (
+      <main className="auth-shell">
+        <p className="card">Carregando seu espaço…</p>
+      </main>
+    );
+  if (dataMode === 'remote' && supabase && !session) return <AuthPanel client={supabase} />;
 
   return (
     <div className="app-shell">
@@ -217,10 +313,13 @@ export default function App() {
             <CircleHelp size={18} /> Como funciona
           </button>
           <button className="profile" onClick={() => setModal('profile')}>
-            <span className="avatar">{state.name.slice(0, 2).toUpperCase()}</span>
+            <span className="avatar">{name.slice(0, 2).toUpperCase()}</span>
             <span>
-              {state.name}
-              <small>{teacher ? 'Professor' : 'Estudante'} · demo local</small>
+              {name}
+              <small>
+                {teacher ? 'Professor' : 'Estudante'} ·{' '}
+                {dataMode === 'remote' ? 'conectado' : 'demo local'}
+              </small>
             </span>
             <Settings2 size={16} />
           </button>
@@ -251,14 +350,14 @@ export default function App() {
               {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
             </button>
             <span className="demo-pill">
-              <span /> Demonstração local
+              <span /> {dataMode === 'remote' ? 'Supabase conectado' : 'Demonstração local'}
             </span>
             <button
               className="topbar-avatar"
-              aria-label="Alterar perfil da demonstração"
+              aria-label={dataMode === 'remote' ? 'Abrir conta' : 'Alterar perfil da demonstração'}
               onClick={() => setModal('profile')}
             >
-              {state.name.slice(0, 1).toUpperCase()}
+              {name.slice(0, 1).toUpperCase()}
             </button>
           </div>
         </header>
@@ -271,7 +370,7 @@ export default function App() {
           )}
           {page === 'overview' && (
             <OverviewPage
-              name={state.name}
+              name={name}
               teacher={teacher}
               problems={all}
               solved={solved}
@@ -314,14 +413,15 @@ export default function App() {
               onPrimaryAction={() => setModal(teacher ? 'create-class' : 'join')}
               onOpenProblem={openProblem}
               onAnnounce={announce}
+              remote={dataMode === 'remote'}
             />
           )}
           {page === 'teacher' && (
             <TeacherPage
               teacher={teacher}
-              classes={[...state.classes, FICTITIOUS_CLASS]}
+              classes={dataMode === 'remote' ? remoteClasses : [...state.classes, FICTITIOUS_CLASS]}
               problems={all}
-              customProblems={state.customProblems}
+              customProblems={dataMode === 'remote' ? all : state.customProblems}
               solvedCount={solvedCount}
               solved={solved}
               loadActivity={loadClassroomActivity}
@@ -329,20 +429,32 @@ export default function App() {
               onCreateProblem={() => setModal('create-problem')}
               onExport={() =>
                 downloadJson(
-                  { classes: state.classes, problems: state.customProblems },
+                  {
+                    classes: myClasses,
+                    problems: dataMode === 'remote' ? all : state.customProblems,
+                  },
                   'classcode-conteudo.json',
                 )
               }
               onOpenProblem={openProblem}
               onChangeProfile={() => setModal('profile')}
+              remote={dataMode === 'remote'}
             />
           )}
           {page === 'problem' && (
             <ProblemPage
               key={activeProblem.id}
               problem={activeProblem}
-              startedAt={state.startedAt[activeProblem.id]}
-              viewedHints={(state.hintViews[activeProblem.id] ?? []).map((v) => v.ordinal)}
+              startedAt={
+                dataMode === 'remote'
+                  ? Date.parse(activityByProblem[activeProblem.id]?.startedAt ?? '') || undefined
+                  : state.startedAt[activeProblem.id]
+              }
+              viewedHints={
+                dataMode === 'remote'
+                  ? (activityByProblem[activeProblem.id]?.hintViews ?? []).map((v) => v.ordinal)
+                  : (state.hintViews[activeProblem.id] ?? []).map((v) => v.ordinal)
+              }
               solved={solved.includes(activeProblem.id)}
               draft={state.drafts[draftKey]}
               language={language}
@@ -393,7 +505,7 @@ export default function App() {
           onClose={() => setTopic(null)}
         />
       )}
-      {modal === 'profile' && (
+      {modal === 'profile' && dataMode === 'demo' && (
         <ProfileModal
           name={state.name}
           role={state.role}
@@ -407,19 +519,39 @@ export default function App() {
           onClose={() => setModal(null)}
         />
       )}
+      {modal === 'profile' && dataMode === 'remote' && supabase && (
+        <Modal title="Sua conta" onClose={() => setModal(null)}>
+          <div className="form-stack">
+            <p>
+              <strong>{name}</strong>
+            </p>
+            <p className="helper">
+              Papel: {teacher ? 'Professor' : 'Estudante'}. Papéis são concedidos por um operador
+              autorizado e não podem ser alterados aqui.
+            </p>
+            <button className="button secondary" onClick={() => void supabase?.auth.signOut()}>
+              Sair da conta
+            </button>
+          </div>
+        </Modal>
+      )}
       {modal === 'join' && (
         <JoinClassModal
+          remote={dataMode === 'remote'}
           onJoin={async (code) => {
             try {
               const id = await repository.joinClassroom(code);
               const joined = (await repository.listClassrooms()).find((c) => c.id === id);
+              if (dataMode === 'remote') await refreshRemote();
               setModal(null);
               navigate('classes');
               announce(`Você está na turma ${joined?.name}.`);
               return null;
             } catch (error) {
               if (error instanceof RepositoryError && error.code === 'invalid_invite')
-                return 'Código não encontrado neste navegador. Experimente CLASS26.';
+                return dataMode === 'remote'
+                  ? 'Código de turma inválido ou expirado.'
+                  : 'Código não encontrado neste navegador. Experimente CLASS26.';
               return describeError(error);
             }
           }}
@@ -428,25 +560,39 @@ export default function App() {
       )}
       {modal === 'create-class' && teacher && (
         <CreateClassModal
-          onCreate={(name, term) =>
-            repository.createClassroom(name, term).then(({ code }) => {
+          remote={dataMode === 'remote'}
+          onCreate={async (name, term, importTrail) => {
+            try {
+              const { id, code } = await repository.createClassroom(name, term);
+              const imported = importTrail ? await repository.importBaseTrail(id) : 0;
+              if (dataMode === 'remote') await refreshRemote();
               setModal(null);
               navigate('classes');
-              announce(`Turma criada. Código: ${code}`);
-            }, fail)
-          }
+              announce(
+                `Turma criada. Código: ${code}${imported ? ` · ${imported} desafios importados` : ''}`,
+              );
+            } catch (error) {
+              fail(error);
+            }
+          }}
           onClose={() => setModal(null)}
         />
       )}
       {modal === 'create-problem' && teacher && (
         <Modal title="Um desafio com propósito" onClose={() => setModal(null)} wide>
           <ProblemEditor
-            classes={state.classes}
+            classes={myClasses}
+            remote={dataMode === 'remote'}
             onSave={(p) =>
-              repository.publishProblem(p).then(() => {
+              repository.publishProblem(p).then(async () => {
+                if (dataMode === 'remote') await refreshRemote();
                 setModal(null);
                 navigate('teacher');
-                announce('Desafio publicado na demonstração.');
+                announce(
+                  dataMode === 'remote'
+                    ? 'Desafio publicado para a turma.'
+                    : 'Desafio publicado na demonstração.',
+                );
                 return null;
               }, describeError)
             }
@@ -456,16 +602,22 @@ export default function App() {
       {modal === 'report' && (
         <ReportModal
           problemTitle={activeProblem.title}
-          evidence={state.reports[activeProblem.id]?.evidence}
+          evidence={
+            dataMode === 'remote'
+              ? activityByProblem[activeProblem.id]?.evidence
+              : state.reports[activeProblem.id]?.evidence
+          }
           solved={solved.includes(activeProblem.id)}
           onSave={(evidence) =>
-            repository.reportProgress(activeProblem.id, evidence).then(() => {
+            repository.reportProgress(activeProblem.id, evidence).then(async () => {
+              if (dataMode === 'remote') await refreshRemote();
               setModal(null);
               announce('Conclusão autodeclarada registrada. Continue aprendendo!');
             }, fail)
           }
           onReopen={() =>
-            repository.reopenProblem(activeProblem.id).then(() => {
+            repository.reopenProblem(activeProblem.id).then(async () => {
+              if (dataMode === 'remote') await refreshRemote();
               setModal(null);
               announce('Desafio reaberto para praticar.');
             }, fail)

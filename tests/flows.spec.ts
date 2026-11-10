@@ -88,6 +88,26 @@ test('laboratório mostra os passos e páginas cabem na tela', async ({ page }) 
     true,
   );
 });
+test('laboratório associado preserva previsão e explicação ao navegar', async ({ page }) => {
+  await page.goto('/#problem/binary');
+  await expect(page.getByRole('heading', { name: 'Encontre o alvo' })).toBeVisible();
+  await page.getByRole('button', { name: 'Abrir laboratório visual' }).click();
+  await expect(page.getByText('Desafio: Encontre o alvo', { exact: true })).toBeVisible();
+  await page.getByLabel(/Previsão do passo/).fill('O meio será comparado com o alvo.');
+  await page.getByLabel(/Explicação do quadro/).fill('O intervalo ainda contém todos os valores.');
+  await nav(page, /^Desafios/);
+  await nav(page, 'Laboratório visual');
+  await expect(page.getByLabel(/Previsão do passo/)).toHaveValue(
+    'O meio será comparado com o alvo.',
+  );
+  await expect(page.getByLabel(/Explicação do quadro/)).toHaveValue(
+    'O intervalo ainda contém todos os valores.',
+  );
+  await page.reload();
+  await expect(page.getByLabel(/Previsão do passo/)).toHaveValue(
+    'O meio será comparado com o alvo.',
+  );
+});
 test('dica libera por tempo decorrido e permanece ao recarregar', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-11-02T15:00:00Z') });
   await page.goto('/');

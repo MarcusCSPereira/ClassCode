@@ -3,9 +3,11 @@ import Modal from '../components/Modal';
 export default function CreateClassModal({
   onCreate,
   onClose,
+  remote = false,
 }: {
-  onCreate: (name: string, term: string) => void;
+  onCreate: (name: string, term: string, importTrail: boolean) => void | Promise<void>;
   onClose: () => void;
+  remote?: boolean;
 }) {
   return (
     <Modal title="Um novo espaço para aprender" onClose={onClose}>
@@ -14,7 +16,11 @@ export default function CreateClassModal({
         onSubmit={(e) => {
           e.preventDefault();
           const d = new FormData(e.currentTarget);
-          onCreate(String(d.get('name')).trim(), String(d.get('term')).trim());
+          void onCreate(
+            String(d.get('name')).trim(),
+            String(d.get('term')).trim(),
+            d.get('importTrail') === 'on',
+          );
         }}
       >
         <label>
@@ -30,8 +36,17 @@ export default function CreateClassModal({
           Semestre
           <input name="term" required defaultValue="2026.2" maxLength={20} />
         </label>
+        {remote && (
+          <label className="checkbox-label">
+            <input name="importTrail" type="checkbox" defaultChecked /> Importar os 7 desafios da
+            trilha-base
+          </label>
+        )}
         <p className="helper">
-          Um código será gerado automaticamente. A turma ficará salva neste navegador.
+          Um código será gerado automaticamente.{' '}
+          {remote
+            ? 'A turma ficará disponível para os usuários convidados.'
+            : 'A turma ficará salva neste navegador.'}
         </p>
         <button type="submit" className="button primary">
           Criar turma <Plus size={16} />

@@ -19,6 +19,7 @@ export interface ActivityRow {
   hintViews: { ordinal: HintOrdinal; viewedAt: string }[];
   reportedAt?: string;
   verification?: 'self_reported';
+  evidence?: string;
 }
 export interface RosterEntry {
   studentId: string;
@@ -32,6 +33,7 @@ export interface ClassroomActivity {
 
 /** Codes mirror the exceptions raised by the SQL functions. */
 export type RepositoryErrorCode =
+  | 'authentication_required'
   | 'teacher_required'
   | 'owner_required'
   | 'invalid_invite'
@@ -41,6 +43,7 @@ export type RepositoryErrorCode =
   | 'invalid_problem'
   | 'invalid_evidence';
 const messages: Record<RepositoryErrorCode, string> = {
+  authentication_required: 'Entre novamente para continuar.',
   teacher_required: 'Esta ação é exclusiva do professor.',
   owner_required: 'Somente o professor responsável pela turma pode fazer isso.',
   invalid_invite: 'Código de turma não encontrado.',

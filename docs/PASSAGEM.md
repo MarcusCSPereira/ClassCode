@@ -39,6 +39,92 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 09/11/2026 · `feat/entrega-3-mvp` · Codex · CC-12
+
+**Itens do backlog:** CC-12 (concluído no modo demo)
+
+**Feito**
+
+- O laboratório visual agora associa cada replay a um tópico e a um desafio do catálogo em [`src/lib/visualLabs.ts`](src/lib/visualLabs.ts): busca binária ↔ `search` / `binary`; bubble sort ↔ `complexity` / `distinct`.
+- [`src/components/Visualizer.tsx`](src/components/Visualizer.tsx) passou a consumir a definição da visualização selecionada, mantendo o replay determinístico e expondo o quadro atual para a página registrar reflexão por passo.
+- [`src/pages/LabPage.tsx`](src/pages/LabPage.tsx) ganhou contexto pedagógico da experiência selecionada, com campos locais de **previsão** e **explicação** por quadro, salvos em `localStorage`.
+- Ao abrir o laboratório a partir de um desafio, o app mantém o contexto e já destaca a visualização correspondente em [`src/App.tsx`](src/App.tsx).
+- Novo teste unitário [`src/lib/visualLabs.test.ts`](src/lib/visualLabs.test.ts) garante que as associações existem e que o replay segue determinístico.
+- [`src/styles.css`](src/styles.css) foi ajustado para acomodar os novos blocos de associação e reflexão, incluindo tema escuro.
+
+**Estado verificado**
+
+- `npm run typecheck`: passou.
+- `npx vitest run src/lib/visualLabs.test.ts src/lib/domain.test.ts`: passou.
+- Não executado: `npm run test:e2e` e `npm run check`; a entrega alterou a UI, mas foquei na validação unitária do comportamento novo.
+
+**Decisões tomadas**
+
+- As reflexões do laboratório ficaram locais ao navegador e fora do `Repository`, porque o backlog não pede persistência remota para CC-12.
+- O vínculo entre visualização e desafio foi centralizado em `src/lib/visualLabs.ts`, para evitar espalhar regras pela UI e preservar o replay determinístico.
+
+**Ficou de fora / limites conhecidos**
+
+- A previsão/explicação ainda não entra em relatório do professor nem em exportação.
+- Só os desafios `binary` e `distinct` possuem visualização associada; os demais continuam abrindo o laboratório no replay padrão de busca binária.
+- Não houve teste E2E cobrindo a escrita das reflexões no navegador.
+
+**Próximo passo esperado**
+
+1. **CC-03 ou CC-20:** retomar um item de plataforma pequeno, sem reabrir a tentativa de migrar toda a UI de uma vez.
+2. Se a frente pedagógica voltar ao laboratório, adicionar cenário E2E para abrir o laboratório a partir de `binary`, escrever reflexão e confirmar que o texto persiste ao navegar.
+
+**Bloqueios**
+
+- Nenhum para o CC-12 no modo demo.
+
+### 09/11/2026 · `feat/entrega-3-mvp` · Codex · CC-18
+
+**Itens do backlog:** CC-18 (parcialmente concluído no banco local; falta homologar em PostgreSQL/Supabase real)
+
+**Feito**
+
+- Nova migration [`supabase/migrations/202611090001_activity_rpc.sql`](supabase/migrations/202611090001_activity_rpc.sql) com as RPCs `public.my_activity()` e `public.classroom_activity(cid uuid)`.
+- As duas RPCs retornam JSON no formato consumido pela camada de atividade: `studentId`, `problemId`, `startedAt`, `hintViews`, `reportedAt`, `verification` e `evidence`; `classroom_activity` também devolve `roster`.
+- `my_activity()` exige usuário autenticado e devolve apenas as tentativas do próprio usuário.
+- `classroom_activity()` exige que o chamador seja o proprietário da turma; aluno da turma, aluno de fora e outro professor recebem negação.
+- Novo arquivo [`src/data/supabaseRepository.ts`](src/data/supabaseRepository.ts) com a base do repositório remoto. Por enquanto, ele já implementa apenas `myActivity()` e `classroomActivity()` sobre RPCs, com parsing e validação do payload.
+- Novo teste unitário [`src/data/supabaseRepository.test.ts`](src/data/supabaseRepository.test.ts) cobrindo parsing, nome/argumentos das RPCs, mapeamento de erros conhecidos e falha em payload inválido.
+- `tests/database.sql` agora cobre grants das duas RPCs, isolamento de leitura, formato básico do retorno e a garantia de que `my_activity()` não devolve atividade de outro aluno.
+- `tests/test-db.sh` passa a aplicar **todas** as migrations de `supabase/migrations/*.sql`, em ordem lexicográfica, em vez de listar só a migration inicial.
+- `src/data/repository.ts` foi alinhado para o modo remoto com `authentication_required` e `evidence?: string` em `ActivityRow`.
+
+**Estado verificado**
+
+- `npm run typecheck`: passou.
+- `npx vitest run src/data/supabaseRepository.test.ts`: 5 testes passaram.
+- `bash tests/test-db.sh`: **não executado por completo** nesta máquina porque `initdb` não está disponível no PATH (`initdb: command not found`).
+- Não executado: `npm run test:e2e` e `npm run check`; esta entrega não alterou a UI.
+
+**Decisões tomadas**
+
+- As RPCs retornam `jsonb`, com chaves em camelCase, para reduzir o mapeamento futuro no `supabaseRepository`.
+- `evidence` já entra no payload de atividade para permitir reidratar o modal de conclusão no modo remoto sem uma consulta extra.
+- O teste de banco foi generalizado para aplicar todas as migrations novas automaticamente.
+
+**Ficou de fora / limites conhecidos**
+
+- O frontend ainda não usa essas RPCs: o `supabaseRepository` existe, mas não está ligado em `src/data/index.ts` nem no `App`.
+- No `supabaseRepository`, todos os métodos além de `myActivity()` e `classroomActivity()` ainda lançam `"CC-03 pendente"`.
+- A migration não foi homologada em PostgreSQL local nem em um projeto Supabase real por falta de `initdb` e de credenciais/ambiente.
+- A UI ainda depende do `demoStore` para nome, papel, turmas, progresso e rascunhos.
+
+**Próximo passo esperado**
+
+1. **Homologar CC-18:** rodar `bash tests/test-db.sh` em uma máquina com PostgreSQL 16+ (`initdb`, `pg_ctl`, `psql`) e aplicar as migrations em um projeto Supabase de desenvolvimento.
+2. **CC-03:** completar `src/data/supabaseRepository.ts` com `listClassrooms`, `listProblems`, `startAttempt`, `revealHint`, `reportProgress` e demais escritas/leitura básicas.
+3. **CC-02/CC-03:** depois ligar autenticação real e seleção demo/remoto, removendo o seletor público de papel no modo remoto.
+
+**Bloqueios**
+
+- Falta ambiente com PostgreSQL local para executar o teste SQL completo.
+- Falta projeto Supabase de desenvolvimento/configuração da D1 para homologação fora do ambiente de teste emulado.
+
 ### 02/11/2026 · `feat/entrega-2-mvp` · Franco Borba · CC-21
 
 **Itens do backlog:** CC-21 (concluído). Com ele, a frente Pedagógica da Entrega 2 está completa: CC-00, CC-15, CC-16, CC-17, CC-19 e CC-21.

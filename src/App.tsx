@@ -64,6 +64,7 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
   const [problemTab, setProblemTab] = useState<ProblemTab>('statement');
+  const [visualContextProblemId, setVisualContextProblemId] = useState<string | null>(null);
   const fail = (error: unknown) => setNotice(describeError(error));
   useEffect(() => {
     const handle = () => {
@@ -125,6 +126,7 @@ export default function App() {
   }
   function openProblem(p: ProblemSummary) {
     setTopic(null);
+    setVisualContextProblemId(p.id);
     setActiveProblem(p);
     setProblemTab('statement');
     repository.startAttempt(p.id).catch(fail);
@@ -301,7 +303,9 @@ export default function App() {
               onOpenProblem={openProblem}
             />
           )}
-          {page === 'visuals' && <LabPage onOpenProblem={openProblem} />}
+          {page === 'visuals' && (
+            <LabPage onOpenProblem={openProblem} contextProblemId={visualContextProblemId} />
+          )}
           {page === 'classes' && (
             <ClassesPage
               teacher={teacher}
@@ -359,7 +363,10 @@ export default function App() {
               }
               onReport={() => setModal('report')}
               onBack={() => navigate('problems')}
-              onOpenLab={() => navigate('visuals')}
+              onOpenLab={() => {
+                setVisualContextProblemId(activeProblem.id);
+                navigate('visuals');
+              }}
             />
           )}
           <footer className="page-footer">

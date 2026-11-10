@@ -90,3 +90,12 @@ Turma fictícia para demonstrar o painel do professor.
 - `npm run test:e2e`: **10 cenários em cada viewport (20 execuções)**. O novo cobre o aviso de dados fictícios (ausente na turma real), os 8 alunos, os quatro sinais, o ranking, "Sem etapa em aberto", a ausência de rolagem horizontal e que a turma não aparece em "Minhas turmas".
 - Os testes de unidade garantem geração determinística, resultado igual em qualquer data, nenhum evento no futuro, uso só do catálogo e acesso só para o professor.
 - Não executado: `bash tests/test-db.sh` (sem PostgreSQL local). O SQL não foi alterado.
+
+## Continuidade remota · CC-02/03/04/05/06/07/18/20 (10/11/2026)
+
+- `tsc --noEmit`: passou com Supabase Auth, estado remoto e contrato completo do repositório.
+- Vitest: **72 testes em 7 arquivos**; os testes do adaptador verificam nomes/argumentos das RPCs, conversão de perfil, turmas, questões e atividade, escritas, erros conhecidos e payloads inválidos.
+- `vite build`: passou; o cliente oficial `@supabase/supabase-js` é dependência de produção.
+- PostgreSQL 16.13 temporário: migrations, seed e testes cobrem Auth emulado, negações, listagens isoladas, publicação, evidência/reabertura, atividade e importação idempotente dos sete modelos privados.
+- Playwright: **22 de 22** fluxos passaram em desktop e celular, preservando o modo demo. O novo cenário abre o laboratório a partir de `binary` e confirma a persistência da previsão/explicação ao navegar e recarregar. O loop de atualização observado anteriormente foi corrigido e o aviso não reapareceu na execução final.
+- Não executado: aplicação das migrations em Supabase real e testes via JWT/PostgREST em dois navegadores. Este ambiente não possui `.env` nem acesso configurado a um projeto Supabase; isso continua sendo condição de aceite de CC-01/09, não deve ser substituído pelo Auth emulado.

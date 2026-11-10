@@ -25,6 +25,7 @@ export default function TeacherPage({
   onExport,
   onOpenProblem,
   onChangeProfile,
+  remote = false,
 }: {
   teacher: boolean;
   classes: Classroom[];
@@ -38,16 +39,23 @@ export default function TeacherPage({
   onExport: () => void;
   onOpenProblem: (p: ProblemSummary) => void;
   onChangeProfile: () => void;
+  remote?: boolean;
 }) {
   if (!teacher)
     return (
       <div className="empty card">
         <LockKeyhole size={30} />
         <h1>Perspectiva do professor</h1>
-        <p>Altere o perfil da demonstração para explorar este painel.</p>
-        <button className="button primary" onClick={onChangeProfile}>
-          Alterar perfil
-        </button>
+        <p>
+          {remote
+            ? 'Sua conta não possui o papel de professor.'
+            : 'Altere o perfil da demonstração para explorar este painel.'}
+        </p>
+        {!remote && (
+          <button className="button primary" onClick={onChangeProfile}>
+            Alterar perfil
+          </button>
+        )}
       </div>
     );
   return (
@@ -56,7 +64,11 @@ export default function TeacherPage({
         <div>
           <div className="eyebrow">ENSINAR É ABRIR CAMINHOS</div>
           <h1>Aprendizagem com direção.</h1>
-          <p>Prepare os próximos desafios e acompanhe o protótipo pela perspectiva do professor.</p>
+          <p>
+            {remote
+              ? 'Prepare os próximos desafios e acompanhe suas turmas.'
+              : 'Prepare os próximos desafios e acompanhe o protótipo pela perspectiva do professor.'}
+          </p>
         </div>
         <button className="button primary" onClick={onCreateProblem}>
           <Plus size={17} /> Criar desafio
@@ -66,7 +78,7 @@ export default function TeacherPage({
         <section className="card">
           <Users />
           <strong>{classes.length}</strong>
-          <span>Turmas na demonstração</span>
+          <span>{remote ? 'Turmas conectadas' : 'Turmas na demonstração'}</span>
         </section>
         <section className="card">
           <Code2 />
@@ -76,7 +88,7 @@ export default function TeacherPage({
         <section className="card">
           <ListChecks />
           <strong>{solvedCount}</strong>
-          <span>Conclusões locais declaradas</span>
+          <span>{remote ? 'Conclusões autodeclaradas' : 'Conclusões locais declaradas'}</span>
         </section>
       </div>
       <div className="teacher-layout">
@@ -118,8 +130,9 @@ export default function TeacherPage({
           <span className="eyebrow">PRÓXIMO MARCO DO PROJETO</span>
           <h2>Da demonstração à sala de aula.</h2>
           <p>
-            Autenticação institucional e autorização serão conectadas ao backend. Por enquanto, o
-            acompanhamento abaixo usa apenas dados deste navegador.
+            {remote
+              ? 'Autenticação, autorização e métricas usam o backend da turma. Os sinais abaixo apoiam a prática e não são nota.'
+              : 'Autenticação institucional e autorização serão conectadas ao backend. Por enquanto, o acompanhamento abaixo usa apenas dados deste navegador.'}
           </p>
           <a
             className="text-button"

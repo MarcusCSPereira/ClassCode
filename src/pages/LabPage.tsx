@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, BookOpen, Lightbulb } from 'lucide-react';
 import { modules, problems } from '../lib/catalog';
 import type { ProblemSummary } from '../data/repository';
@@ -76,6 +76,16 @@ export default function LabPage({
     }));
   }
 
+  const handleStepChange = useCallback(
+    ({
+      frame,
+      step,
+      total,
+    }: Parameters<NonNullable<React.ComponentProps<typeof Visualizer>['onStepChange']>>[0]) =>
+      setPlayback({ step, total, message: frame.message }),
+    [],
+  );
+
   return (
     <>
       <div className="page-title">
@@ -98,9 +108,7 @@ export default function LabPage({
           <Visualizer
             labId={selectedLabId}
             onLabChange={setSelectedLabId}
-            onStepChange={({ frame, step, total }) =>
-              setPlayback({ step, total, message: frame.message })
-            }
+            onStepChange={handleStepChange}
           />
         </section>
         <aside className="card lab-notes">
@@ -140,17 +148,16 @@ export default function LabPage({
           <div className="info-strip">
             <BookOpen size={19} />
             <p>
-              {selectedLab.helper} O replay continua determinístico: a animação não executa o
-              código do editor e sempre repete os mesmos quadros para a mesma entrada.
+              {selectedLab.helper} O replay continua determinístico: a animação não executa o código
+              do editor e sempre repete os mesmos quadros para a mesma entrada.
             </p>
           </div>
-          <button
-            className="button secondary full"
-            onClick={() => onOpenProblem(selectedProblem)}
-          >
+          <button className="button secondary full" onClick={() => onOpenProblem(selectedProblem)}>
             Praticar desafio associado <ArrowRight size={16} />
           </button>
-          <p className="aside-footnote">Quadro atual: {playback.message || 'Preparando replay...'}</p>
+          <p className="aside-footnote">
+            Quadro atual: {playback.message || 'Preparando replay...'}
+          </p>
         </aside>
       </div>
     </>

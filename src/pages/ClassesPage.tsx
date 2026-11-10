@@ -9,6 +9,7 @@ export default function ClassesPage({
   onPrimaryAction,
   onOpenProblem,
   onAnnounce,
+  remote = false,
 }: {
   teacher: boolean;
   classes: Classroom[];
@@ -16,6 +17,7 @@ export default function ClassesPage({
   onPrimaryAction: () => void;
   onOpenProblem: (p: ProblemSummary) => void;
   onAnnounce: (message: string) => void;
+  remote?: boolean;
 }) {
   return (
     <>
@@ -44,25 +46,28 @@ export default function ClassesPage({
             </div>
             <h2>{c.name}</h2>
             <p>
-              {c.teacher} <span>· Ambiente de demonstração</span>
+              {c.teacher}{' '}
+              <span>· {remote ? 'Ambiente conectado' : 'Ambiente de demonstração'}</span>
             </p>
-            <div className="class-code">
-              <span>
-                Código da turma<strong>{c.code}</strong>
-              </span>
-              <button
-                className="icon-button"
-                aria-label={`Copiar código ${c.code}`}
-                onClick={() => {
-                  void navigator.clipboard
-                    .writeText(c.code)
-                    .then(() => onAnnounce('Código da turma copiado.'))
-                    .catch(() => onAnnounce(`Código da turma: ${c.code}`));
-                }}
-              >
-                <Braces size={19} />
-              </button>
-            </div>
+            {c.code && (
+              <div className="class-code">
+                <span>
+                  Código da turma<strong>{c.code}</strong>
+                </span>
+                <button
+                  className="icon-button"
+                  aria-label={`Copiar código ${c.code}`}
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(c.code)
+                      .then(() => onAnnounce('Código da turma copiado.'))
+                      .catch(() => onAnnounce(`Código da turma: ${c.code}`));
+                  }}
+                >
+                  <Braces size={19} />
+                </button>
+              </div>
+            )}
             <div className="class-challenges">
               <strong>Desafios da turma</strong>
               {all
@@ -80,13 +85,15 @@ export default function ClassesPage({
           </section>
         ))}
       </div>
-      <div className="info-strip">
-        <CircleHelp size={19} />
-        <p>
-          Nesta demonstração, turmas e participações são locais. Para experimentar a entrada, use{' '}
-          <strong>CLASS26</strong>. Códigos criados aqui só existem neste navegador.
-        </p>
-      </div>
+      {!remote && (
+        <div className="info-strip">
+          <CircleHelp size={19} />
+          <p>
+            Nesta demonstração, turmas e participações são locais. Para experimentar a entrada, use{' '}
+            <strong>CLASS26</strong>. Códigos criados aqui só existem neste navegador.
+          </p>
+        </div>
+      )}
     </>
   );
 }

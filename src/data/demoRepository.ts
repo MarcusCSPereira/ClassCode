@@ -68,6 +68,9 @@ export function createDemoRepository(
   }
   return {
     mode: 'demo',
+    async getProfile() {
+      return { id: DEMO_USER_ID, displayName: state().name, role: state().role };
+    },
     async listClassrooms() {
       const s = state();
       if (s.role === 'teacher') return [...s.classes, FICTITIOUS_CLASS];
@@ -98,6 +101,10 @@ export function createDemoRepository(
             },
       );
       return classroom.id;
+    },
+    async importBaseTrail(_classroomId: string) {
+      // The demonstration catalog is already available in its seeded classroom.
+      return 0;
     },
     async listProblems() {
       return visibleProblems(catalog, state()).map(withoutHintText);

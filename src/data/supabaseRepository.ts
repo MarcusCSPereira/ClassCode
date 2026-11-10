@@ -7,9 +7,24 @@ import {
   type NewProblem,
   type ProblemSummary,
   type RepositoryErrorCode,
+  type UserProfile,
 } from './repository';
+import type { Classroom, Problem } from '../lib/types';
 
-type RpcName = 'my_activity' | 'classroom_activity';
+type RpcName =
+  | 'my_profile'
+  | 'list_classrooms'
+  | 'create_classroom'
+  | 'join_classroom'
+  | 'import_base_trail'
+  | 'list_problems'
+  | 'publish_problem'
+  | 'start_attempt'
+  | 'get_hint'
+  | 'report_progress'
+  | 'reopen_problem'
+  | 'my_activity'
+  | 'classroom_activity';
 export interface SupabaseRpcError {
   message: string;
   code?: string | null;
@@ -44,6 +59,62 @@ function parseIso(value: unknown, field: string) {
 function parseString(value: unknown, field: string) {
   if (typeof value !== 'string') throw new Error(`Resposta inválida do backend em ${field}.`);
   return value;
+}
+function parseNumber(value: unknown, field: string) {
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    throw new Error(`Resposta inválida do backend em ${field}.`);
+  return value;
+}
+function parseProfile(data: unknown): UserProfile {
+  if (!isRecord(data)) throw new Error('Resposta inválida do backend em my_profile.');
+  const role = data.role;
+  if (role !== 'student' && role !== 'teacher')
+    throw new Error('Resposta inválida do backend em my_profile.role.');
+  return {
+    id: parseString(data.id, 'my_profile.id'),
+    displayName: parseString(data.displayName, 'my_profile.displayName'),
+    role,
+  };
+}
+function parseClassroom(value: unknown, index: number): Classroom {
+  if (!isRecord(value)) throw new Error(`Resposta inválida do backend em classrooms[${index}].`);
+  return {
+    id: parseString(value.id, `classrooms[${index}].id`),
+    name: parseString(value.name, `classrooms[${index}].name`),
+    code: parseString(value.code, `classrooms[${index}].code`),
+    teacher: parseString(value.teacher, `classrooms[${index}].teacher`),
+    term: parseString(value.term, `classrooms[${index}].term`),
+  };
+}
+function parseProblem(value: unknown, index: number): ProblemSummary {
+  if (!isRecord(value)) throw new Error(`Resposta inválida do backend em problems[${index}].`);
+  const difficulty = value.difficulty;
+  if (!['Básico', 'Intermediário', 'Avançado'].includes(difficulty as string))
+    throw new Error(`Resposta inválida do backend em problems[${index}].difficulty.`);
+  if (!Array.isArray(value.hints) || value.hints.length !== 3)
+    throw new Error(`Resposta inválida do backend em problems[${index}].hints.`);
+  return {
+    id: parseString(value.id, `problems[${index}].id`),
+    moduleId: parseString(value.moduleId, `problems[${index}].moduleId`),
+    title: parseString(value.title, `problems[${index}].title`),
+    difficulty: difficulty as Problem['difficulty'],
+    minutes: parseNumber(value.minutes, `problems[${index}].minutes`),
+    objective: parseString(value.objective, `problems[${index}].objective`),
+    statement: parseString(value.statement, `problems[${index}].statement`),
+    input: parseString(value.input, `problems[${index}].input`),
+    output: parseString(value.output, `problems[${index}].output`),
+    constraints: parseString(value.constraints, `problems[${index}].constraints`),
+    exampleInput: parseString(value.exampleInput, `problems[${index}].exampleInput`),
+    exampleOutput: parseString(value.exampleOutput, `problems[${index}].exampleOutput`),
+    source: parseString(value.source, `problems[${index}].source`),
+    authorClassId: parseString(value.authorClassId, `problems[${index}].authorClassId`),
+    hints: value.hints.map((hint, hintIndex) => {
+      if (!isRecord(hint))
+        throw new Error(`Resposta inválida do backend em problems[${index}].hints[${hintIndex}].`);
+      return { afterSeconds: parseNumber(hint.afterSeconds, `problems[${index}].hints`) };
+    }),
+    ...(typeof value.externalUrl === 'string' && { externalUrl: value.externalUrl }),
+  };
 }
 function parseHintOrdinal(value: unknown, field: string): HintOrdinal {
   if (value === 1 || value === 2 || value === 3) return value;
@@ -99,9 +170,6 @@ export function parseClassroomActivityPayload(data: unknown): ClassroomActivity 
   };
 }
 
-function notImplemented(method: string): never {
-  throw new Error(`CC-03 pendente: método remoto ${method} ainda não foi implementado.`);
-}
 function toRepositoryError(error: SupabaseRpcError): Error {
   const message = error.message.trim();
   return KNOWN_CODES.includes(message as RepositoryErrorCode)
@@ -112,32 +180,73 @@ function toRepositoryError(error: SupabaseRpcError): Error {
 export function createSupabaseRepository(client: SupabaseRpcClient): ClassCodeRepository {
   return {
     mode: 'remote',
+    async getProfile() {
+      const { data, error } = await client.rpc('my_profile');
+      if (error) throw toRepositoryError(error);
+      return parseProfile(data);
+    },
     async listClassrooms() {
-      return notImplemented('listClassrooms');
+      const { data, error } = await client.rpc('list_classrooms');
+      if (error) throw toRepositoryError(error);
+      if (!Array.isArray(data)) throw new Error('Resposta inválida do backend em list_classrooms.');
+      return data.map(parseClassroom);
     },
-    async createClassroom(_name: string, _term: string) {
-      return notImplemented('createClassroom');
+    async createClassroom(name: string, term: string) {
+      const { data, error } = await client.rpc('create_classroom', {
+        class_name: name,
+        class_term: term,
+      });
+      if (error) throw toRepositoryError(error);
+      if (!isRecord(data)) throw new Error('Resposta inválida do backend em create_classroom.');
+      return {
+        id: parseString(data.id, 'create_classroom.id'),
+        code: parseString(data.code, 'create_classroom.code'),
+      };
     },
-    async joinClassroom(_code: string) {
-      return notImplemented('joinClassroom');
+    async joinClassroom(code: string) {
+      const { data, error } = await client.rpc('join_classroom', { invite_code: code });
+      if (error) throw toRepositoryError(error);
+      return parseString(data, 'join_classroom');
+    },
+    async importBaseTrail(classroomId: string) {
+      const { data, error } = await client.rpc('import_base_trail', { cid: classroomId });
+      if (error) throw toRepositoryError(error);
+      return parseNumber(data, 'import_base_trail');
     },
     async listProblems(): Promise<ProblemSummary[]> {
-      return notImplemented('listProblems');
+      const { data, error } = await client.rpc('list_problems');
+      if (error) throw toRepositoryError(error);
+      if (!Array.isArray(data)) throw new Error('Resposta inválida do backend em list_problems.');
+      return data.map(parseProblem);
     },
-    async publishProblem(_problem: NewProblem) {
-      return notImplemented('publishProblem');
+    async publishProblem(problem: NewProblem) {
+      const { data, error } = await client.rpc('publish_problem', { payload: problem });
+      if (error) throw toRepositoryError(error);
+      return parseString(data, 'publish_problem');
     },
-    async startAttempt(_problemId: string) {
-      return notImplemented('startAttempt');
+    async startAttempt(problemId: string) {
+      const { data, error } = await client.rpc('start_attempt', { pid: problemId });
+      if (error) throw toRepositoryError(error);
+      return parseIso(data, 'start_attempt');
     },
-    async revealHint(_problemId: string, _ordinal: HintOrdinal) {
-      return notImplemented('revealHint');
+    async revealHint(problemId: string, ordinal: HintOrdinal) {
+      const { data, error } = await client.rpc('get_hint', {
+        pid: problemId,
+        hint_number: ordinal,
+      });
+      if (error) throw toRepositoryError(error);
+      return parseString(data, 'get_hint');
     },
-    async reportProgress(_problemId: string, _evidence: string) {
-      return notImplemented('reportProgress');
+    async reportProgress(problemId: string, evidence: string) {
+      const { error } = await client.rpc('report_progress', {
+        pid: problemId,
+        report_evidence: evidence,
+      });
+      if (error) throw toRepositoryError(error);
     },
-    async reopenProblem(_problemId: string) {
-      return notImplemented('reopenProblem');
+    async reopenProblem(problemId: string) {
+      const { error } = await client.rpc('reopen_problem', { pid: problemId });
+      if (error) throw toRepositoryError(error);
     },
     async myActivity() {
       const { data, error } = await client.rpc('my_activity');

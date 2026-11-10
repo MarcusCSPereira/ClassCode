@@ -36,6 +36,7 @@ select public.test_assert((select count(*) from public.problems)=1,'member reads
 select public.start_attempt(:'pid') as first_start \gset
 select public.test_assert(public.start_attempt(:'pid')=:'first_start'::timestamptz,'attempt start cannot be reset');
 select set_config('test.pid',:'pid',false);
+select set_config('test.cid',:'cid',false);
 do $$ begin
   begin perform public.get_hint(current_setting('test.pid')::uuid,1); raise exception 'early hint leaked'; exception when insufficient_privilege then null; end;
   begin update public.profiles set role='teacher'; raise exception 'role escalated'; exception when insufficient_privilege then null; end;
@@ -52,7 +53,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 select public.test_assert(public.get_hint(:'pid',1)='Uma direção','hint 1 unlocks at 180 seconds');
 do $$ begin
   begin perform public.get_hint(current_setting('test.pid')::uuid,2); raise exception 'hint 2 leaked early'; exception when insufficient_privilege then null; end;
-  begin perform public.classroom_activity(:'cid'::uuid); raise exception 'student read classroom activity'; exception when insufficient_privilege then null; end;
+  begin perform public.classroom_activity(current_setting('test.cid')::uuid); raise exception 'student read classroom activity'; exception when insufficient_privilege then null; end;
 end; $$;
 select public.my_activity() as my_activity \gset
 select public.test_assert(jsonb_array_length(:'my_activity'::jsonb)=1,'my_activity returns one own attempt');
@@ -63,11 +64,11 @@ select public.test_assert((:'my_activity'::jsonb->0->>'verification')='self_repo
 select public.test_assert((:'my_activity'::jsonb->0->>'evidence')='Conferido com o professor.','my_activity includes reported evidence');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
 do $$ begin
-  begin perform public.classroom_activity(:'cid'::uuid); raise exception 'other teacher read classroom activity'; exception when insufficient_privilege then null; end;
+  begin perform public.classroom_activity(current_setting('test.cid')::uuid); raise exception 'other teacher read classroom activity'; exception when insufficient_privilege then null; end;
 end; $$;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
 do $$ begin
-  begin perform public.classroom_activity(:'cid'::uuid); raise exception 'outsider read classroom activity'; exception when insufficient_privilege then null; end;
+  begin perform public.classroom_activity(current_setting('test.cid')::uuid); raise exception 'outsider read classroom activity'; exception when insufficient_privilege then null; end;
 end; $$;
 select public.test_assert(jsonb_array_length(public.my_activity())=0,'my_activity never returns another student');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

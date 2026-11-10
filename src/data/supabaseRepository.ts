@@ -9,7 +9,7 @@ import {
   type RepositoryErrorCode,
 } from './repository';
 
-type RpcName = 'my_activity' | 'classroom_activity';
+type RpcName = 'my_activity' | 'classroom_activity' | 'start_attempt' | 'get_hint';
 export interface SupabaseRpcError {
   message: string;
   code?: string | null;
@@ -127,11 +127,18 @@ export function createSupabaseRepository(client: SupabaseRpcClient): ClassCodeRe
     async publishProblem(_problem: NewProblem) {
       return notImplemented('publishProblem');
     },
-    async startAttempt(_problemId: string) {
-      return notImplemented('startAttempt');
+    async startAttempt(problemId: string) {
+      const { data, error } = await client.rpc('start_attempt', { pid: problemId });
+      if (error) throw toRepositoryError(error);
+      return parseIso(data, 'start_attempt');
     },
-    async revealHint(_problemId: string, _ordinal: HintOrdinal) {
-      return notImplemented('revealHint');
+    async revealHint(problemId: string, ordinal: HintOrdinal) {
+      const { data, error } = await client.rpc('get_hint', {
+        pid: problemId,
+        hint_number: ordinal,
+      });
+      if (error) throw toRepositoryError(error);
+      return parseString(data, 'get_hint');
     },
     async reportProgress(_problemId: string, _evidence: string) {
       return notImplemented('reportProgress');

@@ -39,6 +39,50 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 10/11/2026 · `codex/cc-03-remote-attempt-hints` · Codex · CC-03
+
+**Itens do backlog:** CC-03 (fatia de tentativa e dicas concluída no adaptador remoto)
+
+**Feito**
+
+- `src/data/supabaseRepository.ts` agora implementa `startAttempt()` sobre a RPC `start_attempt`, preservando o horário de início devolvido pelo servidor.
+- `revealHint()` passou a chamar `get_hint` com o problema e o ordinal solicitados; o conteúdo só entra no cliente depois da autorização e do relógio do servidor.
+- As duas operações validam o formato da resposta e reutilizam o mapeamento existente de exceções SQL para `RepositoryError`.
+- `src/data/supabaseRepository.test.ts` cobre nomes e argumentos das RPCs, retornos válidos, erros conhecidos e payloads inválidos.
+- A migration de CC-18 e todas as asserções SQL foram homologadas em um cluster temporário PostgreSQL 16.13, encerrado e removido ao final.
+
+**Estado verificado**
+
+- TypeScript estrito (`tsc --noEmit`): passou.
+- Vitest: **69 testes em 7 arquivos** passaram; o arquivo do repositório Supabase tem 10 testes.
+- Build de produção (`vite build`): passou.
+- Playwright: **20 de 20** fluxos passaram em desktop e celular.
+- PostgreSQL 16.13: bootstrap, todas as migrations, seed e `tests/database.sql` passaram em cluster temporário.
+- A aplicação continuou disponível localmente em `http://127.0.0.1:5173/`.
+
+**Decisões tomadas**
+
+- A entrega ficou restrita às operações que já possuem RPCs estáveis no backend, sem ligar um modo remoto incompleto à interface.
+- O adaptador continua dependendo apenas do contrato mínimo `SupabaseRpcClient`; a instalação e configuração do cliente real ficam junto de CC-02/CC-03, quando houver ambiente Supabase de desenvolvimento.
+- Nenhuma leitura automática chama `get_hint`: a RPC continua reservada à ação explícita de revelar a dica, preservando a métrica de uso.
+
+**Ficou de fora / limites conhecidos**
+
+- O frontend ainda usa somente `DemoRepository`; `src/data/index.ts` não seleciona o repositório Supabase.
+- `listClassrooms`, criação/entrada em turma, `listProblems`, publicação, `reportProgress` e `reopenProblem` ainda lançam `CC-03 pendente` no adaptador remoto.
+- A homologação foi feita em PostgreSQL local com Auth emulado; ainda falta um projeto Supabase de desenvolvimento com JWT/PostgREST reais.
+- A suíte E2E registrou o aviso preexistente `Maximum update depth exceeded` em cenários do laboratório, embora os 20 fluxos tenham passado. Esta entrega não modifica o laboratório.
+
+**Próximo passo esperado**
+
+1. **CC-01/CC-02:** definir o projeto Supabase de desenvolvimento e conectar Auth real sem expor seleção pública de papel.
+2. **CC-03:** implementar uma próxima fatia pequena de leitura, começando por `listClassrooms()` e `listProblems()`, com estados de carregamento/erro antes de ligar as telas.
+3. Depois implementar `reportProgress()` e `reopenProblem()`, mantendo conclusão autodeclarada separada de revisão e Accepted.
+
+**Bloqueios**
+
+- Falta a configuração do projeto Supabase de desenvolvimento para homologação com JWT e PostgREST reais.
+
 ### 09/11/2026 · `feat/entrega-3-mvp` · Codex · CC-12
 
 **Itens do backlog:** CC-12 (concluído no modo demo)

@@ -112,6 +112,62 @@ describe('supabaseRepository', () => {
     expect(rpc).toHaveBeenNthCalledWith(2, 'classroom_activity', { cid: 'class-1' });
   });
 
+  it('inicia uma tentativa pelo servidor e preserva o horário retornado', async () => {
+    const startedAt = '2026-11-10T09:30:00.000Z';
+    const rpc = vi.fn<SupabaseRpcClient['rpc']>().mockResolvedValue({
+      data: startedAt,
+      error: null,
+    });
+    const repo = createSupabaseRepository({ rpc });
+
+    await expect(repo.startAttempt('problem-1')).resolves.toBe(startedAt);
+    expect(rpc).toHaveBeenCalledWith('start_attempt', { pid: 'problem-1' });
+  });
+
+  it('revela uma dica pelo servidor com o ordinal solicitado', async () => {
+    const rpc = vi.fn<SupabaseRpcClient['rpc']>().mockResolvedValue({
+      data: 'Compare o alvo com o elemento central.',
+      error: null,
+    });
+    const repo = createSupabaseRepository({ rpc });
+
+    await expect(repo.revealHint('problem-1', 2)).resolves.toBe(
+      'Compare o alvo com o elemento central.',
+    );
+    expect(rpc).toHaveBeenCalledWith('get_hint', {
+      pid: 'problem-1',
+      hint_number: 2,
+    });
+  });
+
+  it.each([
+    ['startAttempt', 'problem_not_accessible'],
+    ['revealHint', 'hint_locked'],
+  ] as const)('mapeia o erro conhecido de %s para RepositoryError', async (method, code) => {
+    const repo = createSupabaseRepository({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: code } }),
+    });
+
+    const operation =
+      method === 'startAttempt' ? repo.startAttempt('problem-1') : repo.revealHint('problem-1', 1);
+    await expect(operation).rejects.toMatchObject({ code } satisfies Pick<RepositoryError, 'code'>);
+  });
+
+  it('rejeita retornos inválidos das RPCs de tentativa e dica', async () => {
+    const rpc = vi
+      .fn<SupabaseRpcClient['rpc']>()
+      .mockResolvedValueOnce({ data: 'horario-invalido', error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+    const repo = createSupabaseRepository({ rpc });
+
+    await expect(repo.startAttempt('problem-1')).rejects.toThrow(
+      'Resposta inválida do backend em start_attempt',
+    );
+    await expect(repo.revealHint('problem-1', 1)).rejects.toThrow(
+      'Resposta inválida do backend em get_hint',
+    );
+  });
+
   it('mapeia erros conhecidos do backend para RepositoryError', async () => {
     const repo = createSupabaseRepository({
       rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'owner_required' } }),

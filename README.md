@@ -8,24 +8,24 @@
 
 ## O que esta entrega contém
 
-Base React + TypeScript + Vite, com design responsivo e fluxos navegáveis. **É uma demonstração local, não um sistema institucional pronto para uso.** Não exige conta, chave de API ou serviço pago.
+Base React + TypeScript + Vite, com design responsivo e fluxos navegáveis. Sem configuração, abre no modo de demonstração local. O modo remoto conecta Supabase Auth e as RPCs persistentes; ele exige um projeto de desenvolvimento com as migrations aplicadas e ainda precisa de homologação com JWT/PostgREST reais antes de uso institucional.
 
-| Funcionalidade | Estado nesta base |
-| --- | --- |
-| Dashboard, desafios, turmas e painel do professor | Interface funcional com dados locais |
-| Acompanhamento do professor | Métricas por aluno e por questão, sinais de atenção, mapa aluno × questão e CSV ([catálogo](docs/ENTREGA-2.md#6-métricas-do-professor-catálogo-v1)); na demo, há uma turma de dados fictícios, identificada como tal, para ver o painel com 8 alunos |
-| Trilha do básico ao avançado | 12 etapas mapeadas; 7 desafios nas 5 primeiras |
-| Evolução automática | Próximo passo recomendado com motivo e estado de cada etapa conforme conclusões e dicas usadas ([regras](docs/ENTREGA-2.md#5-evolução-automática-e-gradual-modelo-v1)); dados locais por enquanto |
-| Criar turma e entrar com código | Funciona no mesmo navegador; experimente `CLASS26` |
-| Professor criar questão no padrão pedagógico | Formulário validado e publicação local |
-| Dicas em 3, 7 e 12 minutos | Cronômetro local persistido; não é um controle de acesso real |
-| Python 3, Java e C++17 | Editor CodeMirror com realce de sintaxe, indentação, linhas e rascunhos por linguagem |
-| Modo claro/escuro | Botão no topo e preferência salva; primeira abertura em modo escuro |
-| Visualizações | Busca binária e bubble sort com passos, reprodução e pseudocódigo |
-| Avaliação de código | Links para CSES; conclusão autodeclarada com reflexão |
-| Login e autorização reais | Ainda não conectados; alternância de perfil é demonstrativa |
-| Backend institucional | Migração PostgreSQL/Supabase com RLS e RPCs, isolada do frontend |
-| Judge integrado | Contrato TypeScript preparado; execução ainda não implementada |
+| Funcionalidade                                    | Estado nesta base                                                                                                                                                                                                                                    |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard, desafios, turmas e painel do professor | Interface funcional com dados locais                                                                                                                                                                                                                 |
+| Acompanhamento do professor                       | Métricas por aluno e por questão, sinais de atenção, mapa aluno × questão e CSV ([catálogo](docs/ENTREGA-2.md#6-métricas-do-professor-catálogo-v1)); na demo, há uma turma de dados fictícios, identificada como tal, para ver o painel com 8 alunos |
+| Trilha do básico ao avançado                      | 12 etapas mapeadas; 7 desafios nas 5 primeiras                                                                                                                                                                                                       |
+| Evolução automática                               | Próximo passo recomendado com motivo e estado de cada etapa conforme conclusões e dicas usadas ([regras](docs/ENTREGA-2.md#5-evolução-automática-e-gradual-modelo-v1)); dados locais por enquanto                                                    |
+| Criar turma e entrar com código                   | Funciona no mesmo navegador; experimente `CLASS26`                                                                                                                                                                                                   |
+| Professor criar questão no padrão pedagógico      | Formulário validado e publicação local                                                                                                                                                                                                               |
+| Dicas em 3, 7 e 12 minutos                        | Cronômetro local persistido; não é um controle de acesso real                                                                                                                                                                                        |
+| Python 3, Java e C++17                            | Editor CodeMirror com realce de sintaxe, indentação, linhas e rascunhos por linguagem                                                                                                                                                                |
+| Modo claro/escuro                                 | Botão no topo e preferência salva; primeira abertura em modo escuro                                                                                                                                                                                  |
+| Visualizações                                     | Busca binária e bubble sort com passos, reprodução e pseudocódigo                                                                                                                                                                                    |
+| Avaliação de código                               | Links para CSES; conclusão autodeclarada com reflexão                                                                                                                                                                                                |
+| Login e autorização reais                         | Conectados no modo remoto: cadastro de aluno, login/logout, recuperação e sessão persistida; professor é provisionado por operador                                                                                                                   |
+| Backend institucional                             | Contrato remoto completo por RPC, RLS, métricas e trilha-base idempotente; validado em PostgreSQL 16 com Auth emulado                                                                                                                                |
+| Judge integrado                                   | Contrato TypeScript preparado; execução ainda não implementada                                                                                                                                                                                       |
 
 As questões autorais são conteúdo do projeto. Problemas externos são referenciados e abertos no judge de origem; a aplicação não espelha um catálogo de terceiros.
 
@@ -41,6 +41,14 @@ npm run dev
 ```
 
 Abra o endereço mostrado pelo Vite, normalmente `http://127.0.0.1:5173`. A demonstração usa `localStorage`; turmas criadas em outro navegador ou dispositivo não aparecem aqui. Uma única identidade e um único conjunto de dados são compartilhados entre as perspectivas locais.
+
+### Rodar com Supabase
+
+1. Aplique, em ordem, `supabase/migrations/*.sql` e depois `supabase/seed.sql` em um projeto Supabase de desenvolvimento novo.
+2. Copie `.env.example` para `.env.local`, defina `VITE_DATA_MODE=remote`, a URL e a chave publicável do projeto.
+3. Crie contas pela tela de cadastro. Contas nascem como estudante; promova professores somente pelo procedimento de operador descrito em [ARQUITETURA.md](docs/ARQUITETURA.md#provisionamento-de-professor).
+
+Nunca coloque `service_role` em variáveis `VITE_*`. Para voltar à demonstração, use explicitamente `VITE_DATA_MODE=demo`.
 
 ## Experimentar os fluxos
 
@@ -84,7 +92,7 @@ src/
   styles.css               Sistema visual e layouts responsivos
 supabase/
   migrations/              Modelo relacional, RLS e RPCs
-  seed.sql                 As 12 etapas do currículo
+  seed.sql                 As 12 etapas e os 7 modelos privados da trilha-base
 tests/                     Fluxos Playwright e regressões SQL
 docs/                      Plano, decisões, pesquisa, design e roteiro
 .github/workflows/         Qualidade e publicação da demonstração
@@ -94,7 +102,7 @@ docs/                      Plano, decisões, pesquisa, design e roteiro
 
 A demonstração estática usa GitHub Pages e navegação por hash, compatível com o caminho `/ClassCode/`. O workflow `Publish demo` publica após o `Quality` passar na `main`. Para outra conta, atualize links e habilite **Settings → Pages → Source: GitHub Actions**.
 
-A integração futura com Supabase utiliza apenas a URL e a chave publicável no navegador. **Chaves administrativas e credenciais do Judge0 pertencem ao servidor.** O arquivo `.env.example` é apenas a previsão desse contrato; nenhuma variável é consumida nesta versão.
+O modo remoto usa apenas a URL e a chave publicável no navegador. **Chaves administrativas e credenciais do Judge0 pertencem ao servidor.** A presença de credenciais não troca o modo silenciosamente: `VITE_DATA_MODE` seleciona `demo` ou `remote`, e uma configuração remota incompleta produz um erro explícito.
 
 ## Como o time continua
 

@@ -2,14 +2,14 @@
 
 ## Estado atual
 
-SPA em React/TypeScript/Vite. Navegação por hash; `localStorage` guarda dados em `classcode.demo.v1`. Não existe conexão de rede com Supabase ou Judge0. `src/lib/types.ts` é o contrato da demonstração, não um modelo gerado do banco.
+SPA em React/TypeScript/Vite com dois modos explícitos. `VITE_DATA_MODE=demo` usa `localStorage` em `classcode.demo.v1`; `VITE_DATA_MODE=remote` usa Supabase Auth e somente RPCs públicas controladas. Não existe integração Judge0. `src/lib/types.ts` continua sendo o contrato da interface, não um modelo gerado do banco.
 
-Desde o CC-00, cada tela fica em `src/pages/`, cada modal em `src/modals/`, e as escritas passam pela interface `ClassCodeRepository` de `src/data/repository.ts`. O `DemoRepository` a implementa sobre uma store local (`src/data/demoStore.ts`, estado versão 2 com migração da v1). As leituras ainda vêm da store; CC-03 as move para o repositório e adiciona a implementação Supabase. Contrato e pendências: [ENTREGA-2.md](ENTREGA-2.md#7-contrato-de-repositório).
+Cada tela fica em `src/pages/`, cada modal em `src/modals/`, e as operações persistentes passam pela interface `ClassCodeRepository`. O `DemoRepository` usa a store local; o `SupabaseRepository` mapeia todos os métodos do contrato para RPCs e valida os payloads antes de entregá-los à UI. No remoto, perfil, turmas, questões e atividade são carregados do servidor; apenas rascunhos de código e reflexões do laboratório permanecem locais.
 
 ```mermaid
 flowchart LR
-  A[React: aluno e professor] --> D[Estado local da demonstração]
-  A -. Próxima entrega .-> S[Supabase Auth + PostgREST/RPC]
+  A[React: aluno e professor] --> D[DemoRepository + localStorage]
+  A --> S[Supabase Auth + RPC]
   S --> P[(PostgreSQL + RLS)]
   A --> E[Judge externo: outra aba]
   A -. Extensão .-> G[Gateway autenticado]
@@ -22,18 +22,20 @@ flowchart LR
 
 `supabase/migrations/202611020001_core.sql` destina-se a um **projeto Supabase novo de desenvolvimento**. Aplicar pelo SQL Editor ou pelo pipeline de migrations da equipe; depois aplicar `supabase/seed.sql`. Não executar `tests/db-bootstrap.sql` no Supabase: ele emula Auth apenas para testes locais e CI.
 
-| Entidade | Papel |
-| --- | --- |
-| `profiles` | Nome e papel; registro nasce como aluno independentemente de metadados enviados |
-| `classrooms` | Uma turma pertence a um professor |
-| `enrollments` | Participação única por aluno/turma |
-| `modules` | Currículo inicial de 12 etapas |
-| `problems` | Questão estruturada por turma; começa como rascunho |
-| `attempts` | Início único por aluno/questão, registrado pelo servidor |
-| `progress_reports` | Evidência autodeclarada; não contém veredito Accepted |
-| `private.class_invites` | Convites com 128 bits aleatórios; sem leitura pelo cliente |
-| `private.problem_hints` | Conteúdo de dicas sem permissão de leitura direta |
-| `private.hint_views` | Auditoria de dicas reveladas |
+| Entidade                         | Papel                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| `profiles`                       | Nome e papel; registro nasce como aluno independentemente de metadados enviados |
+| `classrooms`                     | Uma turma pertence a um professor                                               |
+| `enrollments`                    | Participação única por aluno/turma                                              |
+| `modules`                        | Currículo inicial de 12 etapas                                                  |
+| `problems`                       | Questão estruturada por turma; começa como rascunho                             |
+| `attempts`                       | Início único por aluno/questão, registrado pelo servidor                        |
+| `progress_reports`               | Evidência autodeclarada; não contém veredito Accepted                           |
+| `private.class_invites`          | Convites com 128 bits aleatórios; sem leitura pelo cliente                      |
+| `private.problem_hints`          | Conteúdo de dicas sem permissão de leitura direta                               |
+| `private.hint_views`             | Auditoria de dicas reveladas                                                    |
+| `private.base_problem_templates` | Sete modelos da trilha-base, incluindo dicas fora da leitura do cliente         |
+| `private.classroom_base_imports` | Controle idempotente dos modelos já importados por turma                        |
 
 ```mermaid
 erDiagram
@@ -50,13 +52,19 @@ erDiagram
 
 ### RPCs implementadas no SQL
 
-| Chamada | Resultado/garantia |
-| --- | --- |
-| `create_classroom(class_name, class_term)` | Professor cria turma e recebe `{id, code}` |
-| `join_classroom(invite_code)` | Matrícula idempotente pelo código; retorna UUID da turma |
-| `start_attempt(pid)` | Cria tentativa ou devolve o mesmo início existente |
-| `set_problem_hints(pid, hints text[])` | Proprietário configura exatamente 3 dicas, com atrasos fixados no servidor |
-| `get_hint(pid, hint_number)` | Verifica turma, publicação e tempo; retorna somente a dica liberada e registra leitura |
+| Chamada                                                         | Resultado/garantia                                                                             |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `create_classroom(class_name, class_term)`                      | Professor cria turma e recebe `{id, code}`                                                     |
+| `join_classroom(invite_code)`                                   | Matrícula idempotente pelo código; retorna UUID da turma                                       |
+| `start_attempt(pid)`                                            | Cria tentativa ou devolve o mesmo início existente                                             |
+| `set_problem_hints(pid, hints text[])`                          | Proprietário configura exatamente 3 dicas, com atrasos fixados no servidor                     |
+| `get_hint(pid, hint_number)`                                    | Verifica turma, publicação e tempo; retorna somente a dica liberada e registra leitura         |
+| `my_profile()`                                                  | Identidade e papel definidos pelo servidor                                                     |
+| `list_classrooms()` / `list_problems()`                         | Leituras filtradas pela propriedade/matrícula, sem expor convites ou textos de dicas indevidos |
+| `publish_problem(payload)`                                      | Valida, cria rascunho, configura três dicas e publica atomicamente                             |
+| `report_progress(pid, report_evidence)` / `reopen_problem(pid)` | Registra ou remove conclusão autodeclarada                                                     |
+| `my_activity()` / `classroom_activity(cid)`                     | Atividade do aluno e relatório restrito ao proprietário                                        |
+| `import_base_trail(cid)`                                        | Importa os sete modelos privados uma única vez por turma                                       |
 
 Publicar uma questão requer inserir `published=false`, configurar as dicas e atualizar `published=true`. Um trigger impede publicação sem as três dicas. O time deve encapsular esse fluxo em um serviço de aplicação e tratar falhas, evitando deixar a UI em estado indefinido.
 
@@ -73,11 +81,8 @@ Isso é um procedimento de operação inicial, não um endpoint a expor no clien
 
 ### O que falta no backend
 
-- Conectar Auth e repositórios ao frontend; gerar tipos do schema e tratar estados de rede.
 - RPC de leitura/rotação de convite exclusiva do proprietário; atualmente o código volta na criação.
-- Leitura de nomes dos alunos para o proprietário. `profiles` lê apenas o próprio perfil nesta base; estender com teste de isolamento, não com política pública.
-- Relatório de uso de dicas para o proprietário; `private.hint_views` continua inacessível ao navegador.
-- Os dois itens anteriores têm proposta de contrato nas RPCs `classroom_activity` e `my_activity` (CC-18, [ENTREGA-2.md](ENTREGA-2.md#63-fonte-de-dados-e-cálculo)).
+- Geração de tipos do schema, retry por consulta e tratamento dedicado de sessão expirada além da renovação automática do cliente.
 - Persistência remota de rascunhos, revisão docente, arquivo de turmas e versionamento de questões.
 - Limites de payload, quotas e rate limiting em endpoints/convites; convites expiráveis e revogáveis.
 - Homologar grants, migrations e funções no Supabase real; o teste local usa Auth emulado.
@@ -88,11 +93,11 @@ O schema já nega acesso aos dados privados por padrão; as funcionalidades acim
 ## Migração do frontend
 
 1. Manter `DemoState` exclusivamente no modo demo. Não usar o seletor de papel para login real.
-2. ~~Criar adaptadores por entidade.~~ Substituído por uma interface única, `ClassCodeRepository`, já usada pelas escritas (CC-00). Falta a implementação Supabase e o login (CC-02/CC-03).
+2. ~~Criar adaptadores por entidade.~~ A interface única e as implementações demo/remota estão ligadas à UI (CC-02/CC-03).
 3. Mapear `moduleId → module_id`, `input → input_spec`, dificuldades PT-BR → enum do banco e demais campos explicitamente.
-4. Substituir IDs de catálogo por UUIDs de questões persistidas. O seed atual contém somente módulos.
+4. ~~Substituir IDs de catálogo por UUIDs de questões persistidas.~~ A trilha-base cria questões com UUID por turma e registra o modelo de origem em tabela privada.
 5. **Remover textos de dicas do catálogo/bundle do modo institucional.** Buscar cada dica por `get_hint`, depois da autorização do servidor.
-6. Usar `start_attempt` e horário retornado pelo servidor. O contador visual não é a autoridade.
+6. ~~Usar `start_attempt` e horário retornado pelo servidor.~~ O modo remoto usa o horário da RPC; o contador visual não é a autoridade.
 7. Introduzir estados `loading`, `empty`, `error`, retry e sessão expirada em cada consulta.
 8. Adicionar comparação de dados entre dois navegadores e testes de acesso direto à API.
 

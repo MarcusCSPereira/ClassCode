@@ -11,9 +11,11 @@ import {
   ExternalLink,
   Lightbulb,
   LockKeyhole,
+  Play,
 } from 'lucide-react';
 import { modules, starters } from '../lib/catalog';
 import { remainingHintSeconds } from '../lib/domain';
+import { judgeGateway, verdictLabel, type JudgeGateway, type SubmissionResult } from '../lib/judge';
 import type { HintOrdinal, Language } from '../lib/types';
 import type { Theme } from '../lib/useTheme';
 import type { ProblemSummary } from '../data/repository';
@@ -33,6 +35,7 @@ export default function ProblemPage({
   theme,
   storageError,
   tab,
+  gateway = judgeGateway,
   onTabChange,
   onLanguageChange,
   onDraftChange,
@@ -50,6 +53,7 @@ export default function ProblemPage({
   theme: Theme;
   storageError: boolean;
   tab: ProblemTab;
+  gateway?: JudgeGateway;
   onTabChange: (tab: ProblemTab) => void;
   onLanguageChange: (language: Language) => void;
   onDraftChange: (value: string) => void;
@@ -60,6 +64,9 @@ export default function ProblemPage({
   onOpenLab: () => void;
 }) {
   const [now, setNow] = useState(Date.now());
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -77,6 +84,30 @@ export default function ProblemPage({
     );
   }
   useEffect(() => viewedHints.forEach(loadHint), [viewedHints.join()]);
+
+  async function runJudge() {
+    setSubmitting(true);
+    setSubmissionError(null);
+    try {
+      const result = await gateway.submit({
+        problemId: problem.id,
+        problemTitle: problem.title,
+        language,
+        sourceCode: draft ?? starters[language],
+        stdin: problem.exampleInput,
+        expectedOutput: problem.exampleOutput,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      setSubmissionResult(result);
+    } catch (error) {
+      setSubmissionError(
+        error instanceof Error ? error.message : 'Falha ao executar código no Judge0.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <>
       <button className="text-button back-button" onClick={onBack}>
@@ -223,19 +254,60 @@ export default function ProblemPage({
             <div className="submission-info">
               <CircleHelp size={18} />
               <p>
-                O editor ainda não executa código.{' '}
+                Execute sua solução nos casos de teste via Judge0 ou{' '}
                 {problem.externalUrl
-                  ? 'Envie sua solução no judge e registre seu progresso aqui.'
-                  : 'Valide sua solução com seu professor e registre seu progresso.'}
+                  ? 'envie no judge de origem e registre seu progresso aqui.'
+                  : 'valide com seu professor e registre seu progresso.'}
               </p>
             </div>
-            <button
-              className={`button ${solved ? 'secondary' : 'primary'} full`}
-              onClick={onReport}
-            >
-              {solved ? <Check size={17} /> : <CheckCheck size={17} />}
-              {solved ? 'Conclusão declarada · ver registro' : 'Registrar conclusão'}
-            </button>
+            {submissionError && (
+              <div className="judge-result judge-error" role="alert">
+                <strong>Erro na execução:</strong> {submissionError}
+              </div>
+            )}
+            {submissionResult && (
+              <div
+                className={`judge-result judge-${submissionResult.verdict}`}
+                role="status"
+                aria-label="Resultado do Judge0"
+              >
+                <div className="judge-result-header">
+                  <strong>{verdictLabel(submissionResult.verdict)}</strong>
+                  <span className="mono">
+                    {submissionResult.passedCases !== undefined &&
+                      submissionResult.totalCases !== undefined &&
+                      `Casos: ${submissionResult.passedCases}/${submissionResult.totalCases}`}
+                    {submissionResult.timeMs !== undefined && ` · ${submissionResult.timeMs} ms`}
+                    {submissionResult.memoryKb !== undefined &&
+                      ` · ${submissionResult.memoryKb} KB`}
+                  </span>
+                </div>
+                {(submissionResult.compileOutput ||
+                  submissionResult.stderr ||
+                  submissionResult.stdout) && (
+                  <pre className="judge-output">
+                    {submissionResult.compileOutput ||
+                      submissionResult.stderr ||
+                      submissionResult.stdout}
+                  </pre>
+                )}
+              </div>
+            )}
+            <div className="submission-actions">
+              <button
+                type="button"
+                className="button primary full"
+                disabled={submitting}
+                onClick={() => void runJudge()}
+              >
+                <Play size={16} />
+                {submitting ? 'Executando no Judge0…' : 'Executar código'}
+              </button>
+              <button className="button secondary full" onClick={onReport}>
+                {solved ? <Check size={17} /> : <CheckCheck size={17} />}
+                {solved ? 'Conclusão declarada · ver registro' : 'Registrar conclusão'}
+              </button>
+            </div>
             <button className="text-button" onClick={onOpenLab}>
               Abrir laboratório visual <ArrowUpRight size={15} />
             </button>

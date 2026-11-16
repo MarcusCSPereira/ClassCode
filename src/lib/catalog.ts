@@ -1,4 +1,4 @@
-import type { Language, Module, Problem } from './types';
+import type { Language, Module, Problem } from './types.ts';
 
 export const modules: Module[] = [
   {

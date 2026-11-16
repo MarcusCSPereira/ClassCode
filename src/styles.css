@@ -1999,6 +1999,50 @@ main {
   display: flex;
   justify-content: center;
 }
+.submission-actions {
+  display: grid;
+  gap: 10px;
+}
+.judge-result {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.judge-result.judge-accepted {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+.judge-result.judge-wrong_answer,
+.judge-result.judge-compile_error,
+.judge-result.judge-runtime_error,
+.judge-result.judge-time_limit,
+.judge-result.judge-memory_limit,
+.judge-result.judge-internal_error,
+.judge-result.judge-error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+.judge-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.judge-output {
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.08);
+  font-family: monospace;
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .hint-card {
   border: 1px solid var(--border);
   padding: 16px;

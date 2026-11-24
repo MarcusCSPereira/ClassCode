@@ -67,6 +67,7 @@ function demoJudge(gateway: JudgeGateway): JudgeGateway {
                   expectedOutput: custom.exampleOutput,
                   isExample: true,
                 },
+                ...(custom.tests ?? []),
               ],
             }
           : request,

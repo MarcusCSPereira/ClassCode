@@ -1806,6 +1806,101 @@ main {
     grid-template-columns: 1fr;
   }
 }
+/* Teacher problem lifecycle (Entrega 4, CC-24): theme tokens only. */
+.teacher-problems {
+  display: grid;
+  margin: 0 0 34px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+.teacher-problem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.teacher-problem:last-child {
+  border-bottom: none;
+}
+.teacher-problem-info strong {
+  display: block;
+  font-size: 13px;
+}
+.teacher-problem-info small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.teacher-problem-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 14px;
+}
+.teacher-problem-actions .text-button {
+  font-size: 12px;
+}
+.test-cases {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.test-cases legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.test-cases > .button {
+  align-self: flex-start;
+}
+.test-case {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.warning-note {
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+  color: var(--text);
+}
+.form-stack textarea.mono {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+@media (max-width: 760px) {
+  .teacher-problem {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .teacher-problem .badge {
+    justify-self: start;
+  }
+  .teacher-problem-actions {
+    justify-content: flex-start;
+  }
+  .test-case {
+    grid-template-columns: 1fr;
+  }
+}
 .back-button {
   margin-bottom: 25px;
 }

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   belongsToClassroom,
   initialState,
+  isPublished,
+  MAX_HIDDEN_TESTS,
   normalizeClassCode,
   remainingHintSeconds,
   safeExternalUrl,
@@ -84,6 +86,32 @@ describe('turmas da demonstração', () => {
     state.joinedClassIds = [];
     state.role = 'teacher';
     expect(visibleProblems(problems, state)).toHaveLength(problems.length + 1);
+  });
+  it('rascunhos e arquivadas aparecem só para o professor', () => {
+    const state = initialState();
+    state.customProblems = (['draft', 'archived', 'published'] as const).map((status) => ({
+      ...problems[0],
+      id: status,
+      status,
+      authorClassId: 'demo-class',
+    }));
+    expect(visibleProblems(problems, state).map((p) => p.id)).toContain('published');
+    expect(visibleProblems(problems, state)).toHaveLength(problems.length + 1);
+    state.role = 'teacher';
+    expect(visibleProblems(problems, state)).toHaveLength(problems.length + 3);
+    expect(isPublished({})).toBe(true);
+    expect(isPublished({ status: 'draft' })).toBe(false);
+  });
+  it('recusa casos ocultos sem saída esperada ou em excesso', () => {
+    const tests = (n: number) =>
+      Array.from({ length: n }, () => ({ stdin: '1', expectedOutput: '1' }));
+    expect(validateProblem({ ...problems[0], tests: tests(MAX_HIDDEN_TESTS) })).toBeNull();
+    expect(validateProblem({ ...problems[0], tests: tests(MAX_HIDDEN_TESTS + 1) })).toContain(
+      'no máximo',
+    );
+    expect(
+      validateProblem({ ...problems[0], tests: [{ stdin: '1', expectedOutput: ' ' }] }),
+    ).toContain('saída esperada');
   });
 });
 describe('visualização algorítmica', () => {

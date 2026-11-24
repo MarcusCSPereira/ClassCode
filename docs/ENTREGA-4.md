@@ -55,7 +55,7 @@ Passos 0–2 e 5–6 já existiam (falta homologar). Esta entrega cobre 3, 4, 7 
 | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | 1     | CC-22 | Endereço do judge configurável, botão desabilitado com explicação quando não há judge, casos de teste no banco lidos só pela função (dono ou aluno matriculado), executor e tratamento compartilhados entre servidor local e função, checagem de casos ocultos no bundle, `test-db.sh` no Windows | **Concluída em 24/11**                           |
 | 2     | CC-23 | Função exige limite de frequência; tabela de submissões; "Aceito" vira conclusão verificada no painel e no CSV                                                                                                                                                                                    | **Fora desta rodada** (precisa de Supabase real) |
-| 3     | CC-24 | Rascunho → validar com solução de referência → publicar; editar e arquivar; casos ocultos no editor                                                                                                                                                                                               | Pendente                                         |
+| 3     | CC-24 | Rascunho → validar com solução de referência → publicar; editar e arquivar; casos ocultos no editor                                                                                                                                                                                               | **Concluída em 24/11**                           |
 | 4     | CC-25 | Detalhe do aluno com evidência; revisar ou pedir ajuste com comentário visível ao aluno; trocar código de convite; script de promoção de professor                                                                                                                                                | Pendente                                         |
 
 ### Critérios de aceite
@@ -63,6 +63,16 @@ Passos 0–2 e 5–6 já existiam (falta homologar). Esta entrega cobre 3, 4, 7 
 - **Fatia 1:** no site estático, o botão aparece desabilitado com explicação (nunca 404/405); no `npm run dev`, o envio não leva casos nem saídas esperadas das questões do catálogo; erros HTTP viram mensagens claras; `judge_cases` nega aluno de outra turma, outro professor, requisitante anônimo e aluno em rascunho; o seed e o arquivo da demo têm os mesmos 31 casos; `npm run check` falha se um caso oculto entrar no bundle.
 - **Fatia 3:** questão nova nasce como rascunho e só aparece para alunos depois de publicada; o professor roda a solução de referência no rascunho; editar mantém o vínculo com as tentativas; questão arquivada some para os alunos e pode ser restaurada; regras iguais no demo e no remoto, com testes SQL de negação.
 - **Fatia 4:** o professor lê a evidência e marca "revisado" ou "ajuste pedido" com comentário; o aluno vê o retorno na tela do desafio; nova evidência do aluno zera a revisão; trocar o convite invalida o código antigo; nada disso é possível para outro professor ou aluno (testes SQL).
+
+### Decisões tomadas na implementação
+
+- **Fatia 3:**
+  - **Validação não é obrigatória.** "Publicar para a turma" só habilita depois de a solução de referência passar. "Publicar sem validar" fica disponível de forma explícita, porque o site estático não tem judge.
+  - **Questão publicada pode ser editada**, com aviso de quantos alunos já a abriram. Não há versionamento: a mudança vale para todos.
+  - **Arquivar** tira a questão dos alunos (`published=false` + `archived_at`) e do acompanhamento da turma; restaurar volta como rascunho. O acompanhamento e a trilha usam só questões publicadas.
+  - **A turma de uma questão não muda** na edição (o servidor recusa).
+  - **Na demo, o catálogo não é editável:** é a trilha de demonstração. No remoto, a trilha importada pertence à turma e é editável, inclusive os casos.
+  - **`publish_problem` foi mantida** para compatibilidade; a interface usa `save_problem` + `set_problem_status`.
 
 ## 6. Decisões pendentes do time
 

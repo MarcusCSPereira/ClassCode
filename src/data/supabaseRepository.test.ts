@@ -208,6 +208,57 @@ describe('supabaseRepository', () => {
     expect(rpc).toHaveBeenNthCalledWith(4, 'reopen_problem', { pid: 'problem-1' });
   });
 
+  it('salva rascunho, lê para edição e muda a situação da questão', async () => {
+    const hints = [
+      { afterSeconds: 180, text: 'D1' },
+      { afterSeconds: 420, text: 'D2' },
+      { afterSeconds: 720, text: 'D3' },
+    ];
+    const tests = [{ stdin: '5 5', expectedOutput: '10' }];
+    const editPayload = { ...problemPayload, hints, tests, status: 'draft', attempts: 2 };
+    const rpc = vi
+      .fn<SupabaseRpcClient['rpc']>()
+      .mockResolvedValueOnce({ data: 'problem-9', error: null })
+      .mockResolvedValueOnce({ data: editPayload, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: [{ ...problemPayload, status: 'archived' }], error: null });
+    const repo = createSupabaseRepository({ rpc });
+    const { id: _id, source: _source, ...base } = problemPayload;
+    const input = { ...base, hints, tests };
+
+    await expect(repo.saveProblem(input)).resolves.toBe('problem-9');
+    await expect(repo.getProblemForEdit('problem-1')).resolves.toMatchObject({
+      id: 'problem-1',
+      authorClassId: 'class-1',
+      hints,
+      tests,
+      status: 'draft',
+      attempts: 2,
+    });
+    await expect(repo.setProblemStatus('problem-1', 'archived')).resolves.toBeUndefined();
+    await expect(repo.listProblems()).resolves.toMatchObject([{ status: 'archived' }]);
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'save_problem', { payload: input });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'get_problem_for_edit', { pid: 'problem-1' });
+    expect(rpc).toHaveBeenNthCalledWith(3, 'set_problem_status', {
+      pid: 'problem-1',
+      new_status: 'archived',
+    });
+  });
+
+  it('rejeita situação desconhecida e edição sem casos de teste', async () => {
+    const badStatus = createSupabaseRepository({
+      rpc: vi
+        .fn()
+        .mockResolvedValue({ data: [{ ...problemPayload, status: 'deleted' }], error: null }),
+    });
+    const noTests = createSupabaseRepository({
+      rpc: vi.fn().mockResolvedValue({ data: { ...problemPayload, status: 'draft' }, error: null }),
+    });
+    await expect(badStatus.listProblems()).rejects.toThrow('problems[0].status');
+    await expect(noTests.getProblemForEdit('problem-1')).rejects.toThrow('get_problem_for_edit');
+  });
+
   it('rejeita payloads remotos que expõem formato incompleto ou inválido', async () => {
     const invalidProblems = createSupabaseRepository({
       rpc: vi.fn().mockResolvedValue({

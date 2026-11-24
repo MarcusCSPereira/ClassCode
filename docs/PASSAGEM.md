@@ -39,6 +39,62 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 3 / CC-24
+
+**Itens do backlog:** CC-24 (concluído); CC-05 fica atendido por ele
+
+**Feito**
+
+- **Banco:** a migration `202611240002_problem_lifecycle.sql` acrescenta `archived_at` e `updated_at` às questões e cria:
+  - `save_problem`: cria rascunho ou edita questão própria, com 3 dicas e até 19 casos ocultos; o exemplo é sempre o caso 1;
+  - `get_problem_for_edit`: só o dono; devolve dicas, casos, estado e quantos alunos abriram;
+  - `set_problem_status`: rascunho, publicada ou arquivada.
+  - `list_problems` passou a mostrar ao dono os rascunhos e as arquivadas, com o campo `status`.
+- **Repositório:** os mesmos três métodos no `DemoRepository` e no `SupabaseRepository`. Os tipos ganharam `ProblemStatus`, `ProblemTest`, `ProblemInput` e `EditableProblem`, e as listagens nunca levam casos ocultos.
+- **Painel do professor:** "Seus desafios publicados" virou **"Suas questões"** (`TeacherProblemList`), com o estado e as ações de cada um:
+  - rascunho: editar e validar e publicar;
+  - publicada: abrir, editar e arquivar;
+  - arquivada: restaurar como rascunho.
+- **Editor (`ProblemEditor`):** preenchido na edição, com a seção "Casos de teste ocultos", os botões "Salvar rascunho" / "Salvar e validar" e um aviso quando alunos já abriram a questão.
+- **Janelas novas:**
+  - `PublishProblemModal` roda a solução de referência no judge e só habilita "Publicar para a turma" com "Aceito"; "Publicar sem validar" é explícito;
+  - `ConfirmModal` confirma o arquivamento.
+- **Aluno, trilha e métricas** usam só questões publicadas. No modo demo, as questões locais enviam ao judge local o exemplo e os casos ocultos.
+- `.gitattributes` mantém os `.sh` em LF.
+- ARQUITETURA, PADRAO-QUESTAO, DESIGN, README, ENTREGA-4, PLANO e VALIDACAO atualizados.
+
+**Estado verificado**
+
+- `npm run check`: 93 testes de unidade, build e checagem do bundle passaram.
+- `npm run test:e2e`: 26 de 26, incluindo o ciclo completo do professor.
+- `bash tests/test-db.sh` (PostgreSQL 18.1): passou, com negações para aluno e outro professor.
+- Revisão visual em desktop claro e celular escuro.
+- Não verificado: Supabase real e Judge0 real.
+
+**Decisões tomadas**
+
+Registradas em [ENTREGA-4.md](ENTREGA-4.md#decisões-tomadas-na-implementação). As principais:
+
+- validar é recomendado, mas não obrigatório;
+- questão publicada pode ser editada, com aviso, sem versionamento;
+- arquivar tira a questão dos alunos e do acompanhamento;
+- o catálogo da demo não é editável.
+
+**Ficou de fora / limites conhecidos**
+
+- O E2E antigo "professor cria turma e questão" mudou de propósito: publicar agora passa pelo rascunho.
+- Sem versionamento de questões publicadas.
+- A validação usa o judge configurado; no site estático só resta "Publicar sem validar".
+
+**Próximo passo esperado**
+
+1. Fatia 4 (CC-25) nesta branch: detalhe do aluno com evidência, revisão com comentário visível ao aluno, troca do código de convite e script de promoção de professor.
+2. Com o projeto Supabase: aplicar as migrations `202611240001` e `202611240002` e o seed, e repetir o ciclo do professor no modo remoto.
+
+**Bloqueios**
+
+- E1 (projeto Supabase) para homologar no remoto.
+
 ### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 1 / CC-22
 
 **Itens do backlog:** análise da Entrega 4 ([ENTREGA-4.md](ENTREGA-4.md)) e CC-22 (concluído)

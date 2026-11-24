@@ -4,12 +4,14 @@ import {
   type ActivityRow,
   type ClassCodeRepository,
   type ClassroomActivity,
+  type EditableProblem,
   type NewProblem,
+  type ProblemInput,
   type ProblemSummary,
   type RepositoryErrorCode,
   type UserProfile,
 } from './repository';
-import type { Classroom, Problem } from '../lib/types';
+import type { Classroom, Problem, ProblemStatus, ProblemTest } from '../lib/types';
 
 type RpcName =
   | 'my_profile'
@@ -19,6 +21,9 @@ type RpcName =
   | 'import_base_trail'
   | 'list_problems'
   | 'publish_problem'
+  | 'save_problem'
+  | 'get_problem_for_edit'
+  | 'set_problem_status'
   | 'start_attempt'
   | 'get_hint'
   | 'report_progress'
@@ -114,6 +119,55 @@ function parseProblem(value: unknown, index: number): ProblemSummary {
       return { afterSeconds: parseNumber(hint.afterSeconds, `problems[${index}].hints`) };
     }),
     ...(typeof value.externalUrl === 'string' && { externalUrl: value.externalUrl }),
+    ...(value.status !== undefined && {
+      status: parseStatus(value.status, `problems[${index}].status`),
+    }),
+  };
+}
+const STATUSES: ProblemStatus[] = ['draft', 'published', 'archived'];
+function parseStatus(value: unknown, field: string): ProblemStatus {
+  if (!STATUSES.includes(value as ProblemStatus))
+    throw new Error(`Resposta inválida do backend em ${field}.`);
+  return value as ProblemStatus;
+}
+function parseTest(value: unknown, index: number): ProblemTest {
+  if (!isRecord(value) || typeof value.stdin !== 'string')
+    throw new Error(`Resposta inválida do backend em tests[${index}].`);
+  return {
+    stdin: value.stdin,
+    expectedOutput: parseString(value.expectedOutput, `tests[${index}].expectedOutput`),
+  };
+}
+export function parseEditableProblem(data: unknown): EditableProblem {
+  if (!isRecord(data) || !Array.isArray(data.tests) || !Array.isArray(data.hints))
+    throw new Error('Resposta inválida do backend em get_problem_for_edit.');
+  // The listed fields are validated as usual; hint text, hidden cases and attempts on top.
+  const summary = parseProblem({ ...data, source: '' }, 0);
+  return {
+    id: summary.id,
+    authorClassId: summary.authorClassId!,
+    moduleId: summary.moduleId,
+    title: summary.title,
+    difficulty: summary.difficulty,
+    minutes: summary.minutes,
+    objective: summary.objective,
+    statement: summary.statement,
+    input: summary.input,
+    output: summary.output,
+    constraints: summary.constraints,
+    exampleInput: summary.exampleInput,
+    exampleOutput: summary.exampleOutput,
+    ...(summary.externalUrl && { externalUrl: summary.externalUrl }),
+    hints: data.hints.map((hint, i) => {
+      if (!isRecord(hint)) throw new Error(`Resposta inválida do backend em hints[${i}].`);
+      return {
+        afterSeconds: parseNumber(hint.afterSeconds, `hints[${i}].afterSeconds`),
+        text: parseString(hint.text, `hints[${i}].text`),
+      };
+    }),
+    tests: data.tests.map(parseTest),
+    status: parseStatus(data.status, 'get_problem_for_edit.status'),
+    attempts: parseNumber(data.attempts, 'get_problem_for_edit.attempts'),
   };
 }
 function parseHintOrdinal(value: unknown, field: string): HintOrdinal {
@@ -223,6 +277,23 @@ export function createSupabaseRepository(client: SupabaseRpcClient): ClassCodeRe
       const { data, error } = await client.rpc('publish_problem', { payload: problem });
       if (error) throw toRepositoryError(error);
       return parseString(data, 'publish_problem');
+    },
+    async saveProblem(problem: ProblemInput) {
+      const { data, error } = await client.rpc('save_problem', { payload: problem });
+      if (error) throw toRepositoryError(error);
+      return parseString(data, 'save_problem');
+    },
+    async getProblemForEdit(problemId: string) {
+      const { data, error } = await client.rpc('get_problem_for_edit', { pid: problemId });
+      if (error) throw toRepositoryError(error);
+      return parseEditableProblem(data);
+    },
+    async setProblemStatus(problemId: string, status: ProblemStatus) {
+      const { error } = await client.rpc('set_problem_status', {
+        pid: problemId,
+        new_status: status,
+      });
+      if (error) throw toRepositoryError(error);
     },
     async startAttempt(problemId: string) {
       const { data, error } = await client.rpc('start_attempt', { pid: problemId });

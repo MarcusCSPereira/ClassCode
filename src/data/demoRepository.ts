@@ -19,10 +19,15 @@ import {
 /** The demo has a single local identity shared by the student and teacher perspectives. */
 export const DEMO_USER_ID = 'demo-user';
 const iso = (ms: number) => new Date(ms).toISOString();
-const withoutHintText = (p: Problem): ProblemSummary => ({
-  ...p,
-  hints: p.hints.map(({ afterSeconds }) => ({ afterSeconds })),
-});
+/** Lists never carry hint text or hidden cases, as in the remote mode. */
+function toSummary(p: Problem): ProblemSummary {
+  const summary: ProblemSummary & { tests?: unknown } = {
+    ...p,
+    hints: p.hints.map(({ afterSeconds }) => ({ afterSeconds })),
+  };
+  delete summary.tests;
+  return summary;
+}
 /** The seeded class receives the catalog; other classes only their own problems. */
 function classroomProblemIds(catalog: Problem[], state: DemoState, classroomId: string) {
   return new Set(
@@ -40,6 +45,12 @@ export function createDemoRepository(
   function accessibleProblem(problemId: string) {
     const problem = visibleProblems(catalog, state()).find((p) => p.id === problemId);
     if (!problem) throw new RepositoryError('problem_not_accessible');
+    return problem;
+  }
+  /** Problems the teacher wrote in this browser; catalog problems are not editable. */
+  function ownProblem(problemId: string) {
+    const problem = state().customProblems.find((p) => p.id === problemId);
+    if (!problem) throw new RepositoryError('owner_required');
     return problem;
   }
   function requireTeacher() {
@@ -107,7 +118,7 @@ export function createDemoRepository(
       return 0;
     },
     async listProblems() {
-      return visibleProblems(catalog, state()).map(withoutHintText);
+      return visibleProblems(catalog, state()).map(toSummary);
     },
     async publishProblem(input) {
       requireTeacher();
@@ -119,9 +130,67 @@ export function createDemoRepository(
         ...input,
         id: crypto.randomUUID(),
         source: 'Questão do professor · demonstração local',
+        status: 'published',
       };
       store.update((s) => ({ ...s, customProblems: [...s.customProblems, problem] }));
       return problem.id;
+    },
+    async saveProblem(input) {
+      requireTeacher();
+      const invalid = validateProblem(input);
+      if (invalid) throw new RepositoryError('invalid_problem', invalid);
+      const existing = input.id ? ownProblem(input.id) : undefined;
+      if (existing && existing.authorClassId !== input.authorClassId)
+        throw new RepositoryError('invalid_problem');
+      if (!state().classes.some((c) => c.id === input.authorClassId))
+        throw new RepositoryError('owner_required');
+      const problem: Problem = {
+        ...input,
+        id: existing?.id ?? crypto.randomUUID(),
+        source: 'Questão do professor · demonstração local',
+        // Problems saved before drafts existed have no status and are published.
+        status: existing ? (existing.status ?? 'published') : 'draft',
+      };
+      store.update((s) => ({
+        ...s,
+        customProblems: existing
+          ? s.customProblems.map((p) => (p.id === problem.id ? problem : p))
+          : [...s.customProblems, problem],
+      }));
+      return problem.id;
+    },
+    async getProblemForEdit(problemId) {
+      requireTeacher();
+      const p = ownProblem(problemId);
+      return {
+        id: p.id,
+        authorClassId: p.authorClassId!,
+        moduleId: p.moduleId,
+        title: p.title,
+        difficulty: p.difficulty,
+        minutes: p.minutes,
+        objective: p.objective,
+        statement: p.statement,
+        input: p.input,
+        output: p.output,
+        constraints: p.constraints,
+        exampleInput: p.exampleInput,
+        exampleOutput: p.exampleOutput,
+        hints: p.hints,
+        ...(p.externalUrl && { externalUrl: p.externalUrl }),
+        tests: p.tests ?? [],
+        status: p.status ?? 'published',
+        // The single demo identity is the only student who can have opened it.
+        attempts: state().startedAt[problemId] ? 1 : 0,
+      };
+    },
+    async setProblemStatus(problemId, status) {
+      requireTeacher();
+      ownProblem(problemId);
+      store.update((s) => ({
+        ...s,
+        customProblems: s.customProblems.map((p) => (p.id === problemId ? { ...p, status } : p)),
+      }));
     },
     async startAttempt(problemId) {
       accessibleProblem(problemId);

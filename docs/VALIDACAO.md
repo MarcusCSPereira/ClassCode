@@ -111,3 +111,23 @@ Judge confiável: endereço configurável, casos de teste no servidor e checagem
 - `bash tests/test-db.sh` em PostgreSQL 18.1 no Windows (o script agora usa `127.0.0.1:54329` no Git Bash): passou com as verificações novas de `judge_cases`. Só a chave de serviço executa a função; o aluno matriculado recebe os 4 casos de `sum` com o exemplo primeiro; o dono roda rascunho; aluno de outra turma, outro professor, aluno em rascunho e requisitante nulo recebem negação; a trilha importada recebe os 31 casos.
 - Site publicado (antes desta fatia): o botão respondia "Falha ao submeter código (HTTP 405)"; o bundle publicado não continha casos ocultos.
 - Não verificado: deploy da Edge Function e chamadas reais ao Judge0 e ao Supabase (sem projeto configurado).
+
+## Entrega 4 · fatia 3 / CC-24 (24/11/2026)
+
+Ciclo da questão do professor: rascunho, casos ocultos, validação, publicação, edição e arquivo.
+
+- `npm run check`: TypeScript, **93 testes de unidade**, build e checagem do bundle. Novos:
+  - demo: rascunho oculto do aluno, edição que mantém id e estado, recusa de mudar de turma, de caso sem saída e de editar o catálogo, contagem de quem abriu, arquivar e restaurar, e questões antigas sem estado que continuam publicadas;
+  - remoto: nomes e argumentos de `save_problem`, `get_problem_for_edit` e `set_problem_status`, e recusa de estado desconhecido ou edição sem casos;
+  - domínio: visibilidade por estado e limites dos casos ocultos.
+- `npm run test:e2e`: **26 de 26** (13 cenários × desktop e celular).
+  - O cenário antigo "professor cria turma e questão" foi **ajustado** ao fluxo novo: rascunho → "Publicar sem validar" → "Abrir".
+  - O novo cenário faz o ciclo completo: cria rascunho com caso oculto; confere que o aluno não o vê; valida com solução de referência (judge interceptado), conferindo que a questão local envia o exemplo e o caso oculto; publica; edita com os casos preenchidos; o aluno vê; arquiva com confirmação; o aluno deixa de ver; restaura como rascunho.
+- `bash tests/test-db.sh` (PostgreSQL 18.1, Windows): passou com as verificações novas:
+  - o rascunho nasce oculto e o dono lê dicas e casos;
+  - o caso 1 é o exemplo;
+  - aluno e outro professor recebem negação para ler, editar, publicar, arquivar e criar;
+  - mudar de turma, 20 casos ocultos, saída vazia, minutos não numéricos e estado desconhecido são recusados;
+  - publicar, abrir, contar tentativas, arquivar, negar acesso e restaurar funcionam.
+- Revisão visual: lista "Suas questões" (desktop claro e celular escuro, sem rolagem horizontal), editor com casos ocultos e janela "Validar e publicar".
+- Não verificado: Supabase real e Judge0 real.

@@ -51,21 +51,25 @@ erDiagram
 
 ### RPCs implementadas no SQL
 
-| Chamada                                                         | Resultado/garantia                                                                             |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `create_classroom(class_name, class_term)`                      | Professor cria turma e recebe `{id, code}`                                                     |
-| `join_classroom(invite_code)`                                   | Matrícula idempotente pelo código; retorna UUID da turma                                       |
-| `start_attempt(pid)`                                            | Cria tentativa ou devolve o mesmo início existente                                             |
-| `set_problem_hints(pid, hints text[])`                          | Proprietário configura exatamente 3 dicas, com atrasos fixados no servidor                     |
-| `get_hint(pid, hint_number)`                                    | Verifica turma, publicação e tempo; retorna somente a dica liberada e registra leitura         |
-| `my_profile()`                                                  | Identidade e papel definidos pelo servidor                                                     |
-| `list_classrooms()` / `list_problems()`                         | Leituras filtradas pela propriedade/matrícula, sem expor convites ou textos de dicas indevidos |
-| `publish_problem(payload)`                                      | Valida, cria rascunho, configura três dicas e publica atomicamente                             |
-| `report_progress(pid, report_evidence)` / `reopen_problem(pid)` | Registra ou remove conclusão autodeclarada                                                     |
-| `my_activity()` / `classroom_activity(cid)`                     | Atividade do aluno e relatório restrito ao proprietário                                        |
-| `import_base_trail(cid)`                                        | Importa os sete modelos privados uma única vez por turma                                       |
+| Chamada                                                         | Resultado/garantia                                                                                 |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `create_classroom(class_name, class_term)`                      | Professor cria turma e recebe `{id, code}`                                                         |
+| `join_classroom(invite_code)`                                   | Matrícula idempotente pelo código; retorna UUID da turma                                           |
+| `start_attempt(pid)`                                            | Cria tentativa ou devolve o mesmo início existente                                                 |
+| `set_problem_hints(pid, hints text[])`                          | Proprietário configura exatamente 3 dicas, com atrasos fixados no servidor                         |
+| `get_hint(pid, hint_number)`                                    | Verifica turma, publicação e tempo; retorna somente a dica liberada e registra leitura             |
+| `my_profile()`                                                  | Identidade e papel definidos pelo servidor                                                         |
+| `list_classrooms()` / `list_problems()`                         | Leituras filtradas pela propriedade/matrícula, sem expor convites ou textos de dicas indevidos     |
+| `publish_problem(payload)`                                      | Valida, cria rascunho, configura três dicas e publica atomicamente                                 |
+| `report_progress(pid, report_evidence)` / `reopen_problem(pid)` | Registra ou remove conclusão autodeclarada                                                         |
+| `my_activity()` / `classroom_activity(cid)`                     | Atividade do aluno e relatório restrito ao proprietário                                            |
+| `import_base_trail(cid)`                                        | Importa os sete modelos privados uma única vez por turma, com seus casos de teste                  |
+| `save_problem(payload)`                                         | Cria rascunho ou edita questão própria (campos, 3 dicas e até 19 casos ocultos) sem mudar o estado |
+| `get_problem_for_edit(pid)`                                     | Só o dono: questão completa com texto das dicas, casos ocultos, estado e nº de alunos que abriram  |
+| `set_problem_status(pid, new_status)`                           | Só o dono: `draft`, `published` ou `archived` (arquivar despublica e pode ser desfeito)            |
+| `judge_cases(pid, requester)`                                   | Só a chave de serviço (função do judge): casos de teste se o requisitante for dono ou matriculado  |
 
-Publicar uma questão requer inserir `published=false`, configurar as dicas e atualizar `published=true`. Um trigger impede publicação sem as três dicas. O time deve encapsular esse fluxo em um serviço de aplicação e tratar falhas, evitando deixar a UI em estado indefinido.
+Ciclo da questão (Entrega 4, CC-24): `save_problem` cria o rascunho, `get_problem_for_edit` o reabre para edição e `set_problem_status` publica, arquiva ou restaura. Um trigger impede publicar sem as três dicas. `list_problems` devolve ao dono os rascunhos e as arquivadas (campo `status`) e aos alunos só as publicadas. `publish_problem` continua existindo para compatibilidade, mas a interface não o usa mais.
 
 ### Provisionamento de professor
 

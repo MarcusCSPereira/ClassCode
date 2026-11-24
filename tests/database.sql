@@ -156,4 +156,67 @@ do $$ begin
   begin perform public.judge_cases(current_setting('test.sum_pid')::uuid,null); raise exception 'anonymous requester read judge cases'; exception when insufficient_privilege then null; end;
 end; $$;
 reset role;
+-- Problem lifecycle (202611240002): drafts with hidden cases, edit, publish, archive, restore.
+select set_config('test.imported_cid',:'imported_cid',false), set_config('test.cid',:'cid',false);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.save_problem(jsonb_build_object(
+  'authorClassId',:'imported_cid','moduleId','foundations','title','Dobro','difficulty','Básico','minutes',10,
+  'objective','Dobrar','statement','Imprima 2n.','input','n','output','2n','constraints','0 ≤ n ≤ 10',
+  'exampleInput','2','exampleOutput','4',
+  'hints',jsonb_build_array(jsonb_build_object('text','D1'),jsonb_build_object('text','D2'),jsonb_build_object('text','D3')),
+  'tests',jsonb_build_array(jsonb_build_object('stdin','5','expectedOutput','10'),jsonb_build_object('stdin','0','expectedOutput','0'))
+)) as lifecycle_pid \gset
+select set_config('test.lifecycle_pid',:'lifecycle_pid',false);
+select public.get_problem_for_edit(:'lifecycle_pid') as edit_payload \gset
+select public.test_assert(:'edit_payload'::jsonb->>'status'='draft','new problems start as drafts');
+select public.test_assert(jsonb_array_length(:'edit_payload'::jsonb->'tests')=2 and :'edit_payload'::jsonb->'hints'->0->>'text'='D1','owner reads hints and hidden cases to edit');
+select public.test_assert(exists(select 1 from jsonb_array_elements(public.list_problems()) p where p->>'id'=:'lifecycle_pid' and p->>'status'='draft'),'owner lists own drafts');
+reset role;
+select public.test_assert((select count(*) from private.problem_tests where problem_id=:'lifecycle_pid')=3,'example is case 1, then the hidden cases');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.test_assert(not exists(select 1 from jsonb_array_elements(public.list_problems()) p where p->>'id'=:'lifecycle_pid'),'students never list drafts');
+do $$ begin
+  begin perform public.start_attempt(current_setting('test.lifecycle_pid')::uuid); raise exception 'student opened a draft'; exception when insufficient_privilege then null; end;
+  begin perform public.get_problem_for_edit(current_setting('test.lifecycle_pid')::uuid); raise exception 'student read a draft for editing'; exception when insufficient_privilege then null; end;
+  begin perform public.set_problem_status(current_setting('test.lifecycle_pid')::uuid,'published'); raise exception 'student published a problem'; exception when insufficient_privilege then null; end;
+  begin perform public.save_problem(jsonb_build_object('authorClassId',current_setting('test.imported_cid'),'hints','[]'::jsonb)); raise exception 'student created a problem'; exception when insufficient_privilege then null; end;
+end; $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
+do $$ begin
+  begin perform public.get_problem_for_edit(current_setting('test.lifecycle_pid')::uuid); raise exception 'another teacher read a draft'; exception when insufficient_privilege then null; end;
+  begin perform public.save_problem(jsonb_build_object('id',current_setting('test.lifecycle_pid'),'authorClassId',current_setting('test.imported_cid'),'hints','[]'::jsonb)); raise exception 'another teacher edited a problem'; exception when insufficient_privilege then null; end;
+  begin perform public.set_problem_status(current_setting('test.lifecycle_pid')::uuid,'archived'); raise exception 'another teacher archived a problem'; exception when insufficient_privilege then null; end;
+end; $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.save_problem(:'edit_payload'::jsonb || jsonb_build_object('title','Dobro de n','tests',jsonb_build_array(jsonb_build_object('stdin','5','expectedOutput','10'))))=:'lifecycle_pid'::uuid as same_id \gset
+select public.test_assert(:'same_id'::boolean,'editing keeps the problem id');
+select public.test_assert(public.get_problem_for_edit(:'lifecycle_pid')->>'title'='Dobro de n' and jsonb_array_length(public.get_problem_for_edit(:'lifecycle_pid')->'tests')=1,'editing saves fields and replaces hidden cases');
+do $$
+declare base jsonb := public.get_problem_for_edit(current_setting('test.lifecycle_pid')::uuid);
+begin
+  begin perform public.save_problem(base || jsonb_build_object('authorClassId',current_setting('test.cid'))); raise exception 'problem moved to another class'; exception when others then if sqlerrm <> 'invalid_problem' then raise; end if; end;
+  begin perform public.save_problem(base || jsonb_build_object('tests',(select jsonb_agg(jsonb_build_object('stdin','1','expectedOutput','1')) from generate_series(1,20)))); raise exception 'twenty hidden cases accepted'; exception when others then if sqlerrm <> 'invalid_problem' then raise; end if; end;
+  begin perform public.save_problem(base || jsonb_build_object('tests',jsonb_build_array(jsonb_build_object('stdin','1','expectedOutput','  ')))); raise exception 'blank expected output accepted'; exception when others then if sqlerrm <> 'invalid_problem' then raise; end if; end;
+  begin perform public.save_problem(base || jsonb_build_object('minutes','muito')); raise exception 'non-numeric minutes accepted'; exception when others then if sqlerrm <> 'invalid_problem' then raise; end if; end;
+  begin perform public.set_problem_status(current_setting('test.lifecycle_pid')::uuid,'deleted'); raise exception 'unknown status accepted'; exception when others then if sqlerrm <> 'invalid_problem' then raise; end if; end;
+end; $$;
+select public.set_problem_status(:'lifecycle_pid','published');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.test_assert(exists(select 1 from jsonb_array_elements(public.list_problems()) p where p->>'id'=:'lifecycle_pid' and p->>'status'='published'),'students list published problems');
+select public.start_attempt(:'lifecycle_pid') is not null as opened \gset
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.test_assert((public.get_problem_for_edit(:'lifecycle_pid')->>'attempts')::integer=1,'owner sees how many students opened the problem');
+select public.set_problem_status(:'lifecycle_pid','archived');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.test_assert(not exists(select 1 from jsonb_array_elements(public.list_problems()) p where p->>'id'=:'lifecycle_pid'),'archived problems leave the student list');
+do $$ begin
+  begin perform public.start_attempt(current_setting('test.lifecycle_pid')::uuid); raise exception 'student opened an archived problem'; exception when insufficient_privilege then null; end;
+end; $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.test_assert(public.get_problem_for_edit(:'lifecycle_pid')->>'status'='archived','owner keeps archived problems');
+select public.set_problem_status(:'lifecycle_pid','draft');
+select public.test_assert(public.get_problem_for_edit(:'lifecycle_pid')->>'status'='draft','archived problems restore as drafts');
+reset role;
 select 'Database assertions passed' as result;

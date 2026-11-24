@@ -21,6 +21,16 @@ export interface Problem {
   externalUrl?: string;
   source: string;
   authorClassId?: string;
+  /** Absent on catalog problems, which are always published. */
+  status?: ProblemStatus;
+  /** Hidden judge cases written by the teacher; the example is always case 1. */
+  tests?: ProblemTest[];
+}
+/** draft: only the teacher sees it; published: students practice; archived: hidden, restorable. */
+export type ProblemStatus = 'draft' | 'published' | 'archived';
+export interface ProblemTest {
+  stdin: string;
+  expectedOutput: string;
 }
 export interface Module {
   id: string;

@@ -47,7 +47,7 @@ Até 09/11, se autenticação, matrícula e publicação ainda não estiverem in
 | CC-02 | P0         | Login/logout, cadastro, recuperação e sessão conectados no modo remoto; papel de professor só por operador. **Falta homologação no Supabase real**                          | CC-01         |
 | CC-03 | P0         | Adaptador completo, estado remoto e seleção explícita demo/remoto implementados. **Falta homologação no Supabase real**                                                     | CC-02         |
 | CC-04 | P0         | Criar/listar turma e entrar por convite implementados; repetição/inválido tratados. **Falta validar entre dois navegadores reais**                                          | CC-03         |
-| CC-05 | P0         | Criar rascunho de questão, configurar três dicas via RPC, publicar depois de validar; editar e arquivar com confirmação                                                     | CC-04         |
+| CC-05 | P0         | Criar rascunho de questão, configurar três dicas via RPC, publicar depois de validar; editar e arquivar com confirmação. **Concluído em 24/11 pelo CC-24**                  | CC-04         |
 | CC-06 | P0         | Tentativa idempotente e dicas por RPC ligadas ao modo remoto; payload de listagem não contém textos das dicas. **Falta homologação real**                                   | CC-05         |
 | CC-07 | P0         | Evidência autodeclarada e reabertura ligadas ao modo remoto, sem fingir Accepted. **Falta homologação real**                                                                | CC-06         |
 | CC-08 | P0         | Relatório da turma com nomes, tentativas, conclusões declaradas e ajuda utilizada; RLS para leitura do proprietário; exportação CSV. **Desdobrado em CC-17, CC-18 e CC-19** | CC-07         |
@@ -77,7 +77,7 @@ Itens adicionados na Entrega 4. Diagnóstico, fluxo e critérios em [ENTREGA-4.m
 | ----- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | CC-22 | P0         | Judge confiável: endereço configurável, botão desabilitado sem judge, casos de teste no servidor com acesso conferido, checagem do bundle. **Concluído em 24/11** | CC-13        |
 | CC-23 | P1         | Submissões salvas, limite de frequência e "Aceito" como conclusão verificada no painel                                                                            | CC-22, CC-01 |
-| CC-24 | P0         | Ciclo da questão: rascunho, casos ocultos, validação com solução de referência, publicar, editar e arquivar                                                       | CC-22        |
+| CC-24 | P0         | Ciclo da questão: rascunho, casos ocultos, validação com solução de referência, publicar, editar e arquivar. **Concluído em 24/11**                               | CC-22        |
 | CC-25 | P0         | Revisão do aluno com comentário, troca do código de convite e script de promoção de professor                                                                     | CC-19        |
 
 P0 é o MVP; P1 melhora a experiência quando o fluxo estiver estável; P2 não bloqueia a apresentação. Cada integrante assume uma entrega ou grupo coerente conforme disponibilidade, sem pressupor uma equipe específica.

@@ -19,11 +19,11 @@ Questões externas também têm esse registro pedagógico, com URL e atribuiçã
 
 ## Ajuda progressiva
 
-| Liberação | Nível | Papel da dica |
-| --- | --- | --- |
-| 3 min | Direção | Pergunta ou observação sobre o problema; não entregar a implementação |
-| 7 min | Estratégia | Estrutura/técnica, invariante ou redução relevante |
-| 12 min | Pseudocódigo | Passos concretos e armadilhas, evitando simplesmente colar uma solução |
+| Liberação | Nível        | Papel da dica                                                          |
+| --------- | ------------ | ---------------------------------------------------------------------- |
+| 3 min     | Direção      | Pergunta ou observação sobre o problema; não entregar a implementação  |
+| 7 min     | Estratégia   | Estrutura/técnica, invariante ou redução relevante                     |
+| 12 min    | Pseudocódigo | Passos concretos e armadilhas, evitando simplesmente colar uma solução |
 
 O relógio começa quando a tentativa é criada. Sair e voltar não reinicia; o tempo de parede continua. Na demonstração o relógio e as dicas são locais; na versão institucional, a autoridade é o banco e a dica bloqueada não deve sair do servidor.
 
@@ -57,4 +57,10 @@ Saída:   20
 - A fonte está atribuída e o link abre o problema correto?
 - Para judge interno: testes privados, comparador e complexidade esperada foram revisados por outra pessoa?
 
-No backend inicial, a questão é criada como rascunho. Configurar as três dicas e só então publicar. Uma questão publicada não deve ter seu significado alterado sem considerar o progresso e as tentativas existentes; versionamento é uma evolução necessária.
+## Casos de teste e publicação
+
+O exemplo do enunciado é sempre o **caso 1**, e o aluno o vê. O professor acrescenta até **19 casos ocultos** no editor, cada um com entrada e saída esperada. Eles definem o veredito do "Executar código", ficam no servidor e nunca aparecem para o aluno. Cubra o caso mínimo, os limites das restrições, valores repetidos e a ausência de resposta quando houver.
+
+Toda questão nasce como **rascunho**, visível só para o professor. Em "Validar e publicar", o professor roda a própria solução de referência nos casos; publicar sem validar continua possível, de forma explícita, quando a publicação não tem judge. Arquivar tira a questão dos alunos e do acompanhamento, guarda o que já foi feito e pode ser desfeito como rascunho.
+
+Editar uma questão publicada muda a questão para todos, inclusive para quem já a concluiu. O editor avisa quantos alunos já a abriram. Versionamento continua sendo uma evolução futura.

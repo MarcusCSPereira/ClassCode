@@ -188,4 +188,70 @@ describe('repositório da demonstração', () => {
     expect(await repo.classroomActivity(other)).toEqual({ roster: [], activity: [] });
     expect(await rejection(repo.classroomActivity('unknown'))).toBe('owner_required');
   });
+
+  it('ciclo da questão: rascunho, edição, publicação, arquivo e restauração', async () => {
+    store.update((s) => ({ ...s, role: 'teacher' }));
+    const { id: classId } = await repo.createClassroom('Turma C', '2026.2');
+    const { id: _id, source: _source, ...base } = problems[0];
+    const input = {
+      ...base,
+      authorClassId: classId,
+      tests: [{ stdin: '5 5', expectedOutput: '10' }],
+    };
+    const id = await repo.saveProblem(input);
+    const listed = (await repo.listProblems()).find((p) => p.id === id)!;
+    expect(listed.status).toBe('draft');
+    expect(listed).not.toHaveProperty('tests');
+    const editable = await repo.getProblemForEdit(id);
+    expect(editable).toMatchObject({ id, status: 'draft', attempts: 0, tests: input.tests });
+    expect(editable.hints[0].text).toBe(problems[0].hints[0].text);
+
+    store.update((s) => ({
+      ...s,
+      role: 'student',
+      joinedClassIds: [...s.joinedClassIds, classId],
+    }));
+    expect((await repo.listProblems()).some((p) => p.id === id)).toBe(false);
+    expect(await rejection(repo.startAttempt(id))).toBe('problem_not_accessible');
+    expect(await rejection(repo.saveProblem({ ...input, id }))).toBe('teacher_required');
+
+    store.update((s) => ({ ...s, role: 'teacher' }));
+    expect(await repo.saveProblem({ ...input, id, title: 'Soma revisada' })).toBe(id);
+    expect(await repo.getProblemForEdit(id)).toMatchObject({
+      title: 'Soma revisada',
+      status: 'draft',
+    });
+    expect(await rejection(repo.saveProblem({ ...input, id, authorClassId: 'demo-class' }))).toBe(
+      'invalid_problem',
+    );
+    expect(
+      await rejection(repo.saveProblem({ ...input, tests: [{ stdin: '1', expectedOutput: ' ' }] })),
+    ).toBe('invalid_problem');
+    expect(await rejection(repo.getProblemForEdit('sum'))).toBe('owner_required');
+
+    await repo.setProblemStatus(id, 'published');
+    store.update((s) => ({ ...s, role: 'student' }));
+    expect((await repo.listProblems()).find((p) => p.id === id)?.status).toBe('published');
+    await repo.startAttempt(id);
+    store.update((s) => ({ ...s, role: 'teacher' }));
+    expect((await repo.getProblemForEdit(id)).attempts).toBe(1);
+
+    await repo.setProblemStatus(id, 'archived');
+    store.update((s) => ({ ...s, role: 'student' }));
+    expect((await repo.listProblems()).some((p) => p.id === id)).toBe(false);
+    store.update((s) => ({ ...s, role: 'teacher' }));
+    await repo.setProblemStatus(id, 'draft');
+    expect((await repo.getProblemForEdit(id)).status).toBe('draft');
+  });
+
+  it('questões salvas antes dos rascunhos continuam publicadas ao serem editadas', async () => {
+    store.update((s) => ({
+      ...s,
+      role: 'teacher',
+      customProblems: [{ ...problems[0], id: 'legado', authorClassId: 'demo-class' }],
+    }));
+    const { id: _id, source: _source, ...base } = problems[0];
+    await repo.saveProblem({ ...base, id: 'legado', authorClassId: 'demo-class', tests: [] });
+    expect((await repo.getProblemForEdit('legado')).status).toBe('published');
+  });
 });

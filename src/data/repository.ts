@@ -38,6 +38,15 @@ export interface ActivityRow {
   reportedAt?: string;
   verification?: 'self_reported';
   evidence?: string;
+  /** The teacher's review of the completion; cleared when the student changes the evidence. */
+  review?: ProgressReview;
+}
+export type ReviewStatus = 'reviewed' | 'changes_requested';
+export interface ProgressReview {
+  status: ReviewStatus;
+  /** Required when asking for changes; the student reads it on the problem page. */
+  comment?: string;
+  reviewedAt: string;
 }
 export interface RosterEntry {
   studentId: string;
@@ -59,8 +68,12 @@ export type RepositoryErrorCode =
   | 'attempt_required'
   | 'hint_locked'
   | 'invalid_problem'
-  | 'invalid_evidence';
+  | 'invalid_evidence'
+  | 'report_required'
+  | 'invalid_review';
 const messages: Record<RepositoryErrorCode, string> = {
+  report_required: 'O aluno ainda não registrou a conclusão deste desafio.',
+  invalid_review: 'Para pedir um ajuste, escreva um comentário de até 1000 caracteres.',
   authentication_required: 'Entre novamente para continuar.',
   teacher_required: 'Esta ação é exclusiva do professor.',
   owner_required: 'Somente o professor responsável pela turma pode fazer isso.',
@@ -107,4 +120,13 @@ export interface ClassCodeRepository {
   reopenProblem(problemId: string): Promise<void>;
   myActivity(): Promise<ActivityRow[]>;
   classroomActivity(classroomId: string): Promise<ClassroomActivity>;
+  /** Owner only. `clear` removes the review; asking for changes requires a comment. */
+  reviewProgress(
+    problemId: string,
+    studentId: string,
+    status: ReviewStatus | 'clear',
+    comment?: string,
+  ): Promise<void>;
+  /** Owner only. The old code stops working at once; enrolled students stay. */
+  rotateInvite(classroomId: string): Promise<string>;
 }

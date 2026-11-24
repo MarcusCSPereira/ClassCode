@@ -8,7 +8,9 @@ import {
   type NewProblem,
   type ProblemInput,
   type ProblemSummary,
+  type ProgressReview,
   type RepositoryErrorCode,
+  type ReviewStatus,
   type UserProfile,
 } from './repository';
 import type { Classroom, Problem, ProblemStatus, ProblemTest } from '../lib/types';
@@ -24,6 +26,8 @@ type RpcName =
   | 'save_problem'
   | 'get_problem_for_edit'
   | 'set_problem_status'
+  | 'review_progress'
+  | 'rotate_invite'
   | 'start_attempt'
   | 'get_hint'
   | 'report_progress'
@@ -51,6 +55,8 @@ const KNOWN_CODES: RepositoryErrorCode[] = [
   'hint_locked',
   'invalid_problem',
   'invalid_evidence',
+  'report_required',
+  'invalid_review',
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -200,6 +206,19 @@ export function parseActivityRow(value: unknown, index = 0): ActivityRow {
     }),
     ...(verification !== undefined && { verification }),
     ...(value.evidence !== undefined && { evidence: value.evidence }),
+    ...(value.review !== undefined && { review: parseReview(value.review, index) }),
+  };
+}
+function parseReview(value: unknown, index: number): ProgressReview {
+  const field = `activity[${index}].review`;
+  if (!isRecord(value) || !['reviewed', 'changes_requested'].includes(value.status as string))
+    throw new Error(`Resposta inválida do backend em ${field}.`);
+  if (value.comment !== undefined && typeof value.comment !== 'string')
+    throw new Error(`Resposta inválida do backend em ${field}.comment.`);
+  return {
+    status: value.status as ReviewStatus,
+    ...(value.comment !== undefined && { comment: value.comment }),
+    reviewedAt: parseIso(value.reviewedAt, `${field}.reviewedAt`),
   };
 }
 export function parseActivityRowsPayload(data: unknown): ActivityRow[] {
@@ -328,6 +347,20 @@ export function createSupabaseRepository(client: SupabaseRpcClient): ClassCodeRe
       const { data, error } = await client.rpc('classroom_activity', { cid: classroomId });
       if (error) throw toRepositoryError(error);
       return parseClassroomActivityPayload(data);
+    },
+    async reviewProgress(problemId, studentId, status, comment) {
+      const { error } = await client.rpc('review_progress', {
+        pid: problemId,
+        sid: studentId,
+        review_status: status,
+        review_comment: comment ?? null,
+      });
+      if (error) throw toRepositoryError(error);
+    },
+    async rotateInvite(classroomId) {
+      const { data, error } = await client.rpc('rotate_invite', { cid: classroomId });
+      if (error) throw toRepositoryError(error);
+      return parseString(data, 'rotate_invite');
     },
   };
 }

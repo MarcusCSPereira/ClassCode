@@ -58,6 +58,12 @@ export interface ProgressReport {
   evidence: string;
   reportedAt: number;
 }
+/** The teacher's review of the local identity's completion (demo only). */
+export interface DemoReview {
+  status: 'reviewed' | 'changes_requested';
+  comment?: string;
+  reviewedAt: number;
+}
 /** Demo persistence. Version 2 keeps the timestamps that metrics and progression need. */
 export interface DemoState {
   version: 2;
@@ -71,6 +77,8 @@ export interface DemoState {
   drafts: Record<string, string>;
   hintViews: Record<string, HintView[]>;
   reports: Record<string, ProgressReport>;
+  /** Added in the Entrega 4; absent in data saved before it. */
+  reviews?: Record<string, DemoReview>;
 }
 /** Shape saved by the first demo release; migrated on read. */
 export interface DemoStateV1 {

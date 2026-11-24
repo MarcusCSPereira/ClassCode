@@ -219,4 +219,56 @@ select public.test_assert(public.get_problem_for_edit(:'lifecycle_pid')->>'statu
 select public.set_problem_status(:'lifecycle_pid','draft');
 select public.test_assert(public.get_problem_for_edit(:'lifecycle_pid')->>'status'='draft','archived problems restore as drafts');
 reset role;
+-- Teacher review and invite rotation (202611240003).
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.start_attempt(:'sum_pid') is not null as sum_started \gset
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$ begin
+  begin perform public.review_progress(current_setting('test.sum_pid')::uuid,'00000000-0000-0000-0000-000000000003'::uuid,'reviewed',null); raise exception 'reviewed without a report'; exception when others then if sqlerrm <> 'report_required' then raise; end if; end;
+end; $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.report_progress(:'sum_pid','Somei os dois números.');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.review_progress(:'sum_pid','00000000-0000-0000-0000-000000000003','changes_requested','Teste o caso 0 0.');
+select public.test_assert((select value->'review'->>'status' from jsonb_array_elements(public.classroom_activity(:'imported_cid')->'activity') value where value->>'problemId'=:'sum_pid')='changes_requested','teacher sees the review in class activity');
+do $$ begin
+  begin perform public.review_progress(current_setting('test.sum_pid')::uuid,'00000000-0000-0000-0000-000000000003'::uuid,'changes_requested','  '); raise exception 'change request without comment'; exception when others then if sqlerrm <> 'invalid_review' then raise; end if; end;
+  begin perform public.review_progress(current_setting('test.sum_pid')::uuid,'00000000-0000-0000-0000-000000000003'::uuid,'approved',null); raise exception 'unknown review status'; exception when others then if sqlerrm <> 'invalid_review' then raise; end if; end;
+end; $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.test_assert((select value->'review'->>'comment' from jsonb_array_elements(public.my_activity()) value where value->>'problemId'=:'sum_pid')='Teste o caso 0 0.','student reads the feedback');
+select public.test_assert(not has_table_privilege('authenticated','public.progress_reviews','select'),'reviews are read only through the activity RPCs');
+do $$ begin
+  begin perform public.review_progress(current_setting('test.sum_pid')::uuid,'00000000-0000-0000-0000-000000000003'::uuid,'reviewed',null); raise exception 'student reviewed own work'; exception when insufficient_privilege then null; end;
+  begin perform public.rotate_invite(current_setting('test.imported_cid')::uuid); raise exception 'student rotated an invite'; exception when insufficient_privilege then null; end;
+end; $$;
+select public.report_progress(:'sum_pid','Somei e testei 0 0.');
+select public.test_assert(not ((select value from jsonb_array_elements(public.my_activity()) value where value->>'problemId'=:'sum_pid') ? 'review'),'new evidence clears the review');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
+do $$ begin
+  begin perform public.review_progress(current_setting('test.sum_pid')::uuid,'00000000-0000-0000-0000-000000000003'::uuid,'reviewed',null); raise exception 'another teacher reviewed'; exception when insufficient_privilege then null; end;
+  begin perform public.rotate_invite(current_setting('test.imported_cid')::uuid); raise exception 'another teacher rotated an invite'; exception when insufficient_privilege then null; end;
+end; $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.review_progress(:'sum_pid','00000000-0000-0000-0000-000000000003','reviewed',null);
+select public.test_assert((select value->'review'->>'status' from jsonb_array_elements(public.classroom_activity(:'imported_cid')->'activity') value where value->>'problemId'=:'sum_pid')='reviewed','teacher marks the completion as reviewed');
+select public.review_progress(:'sum_pid','00000000-0000-0000-0000-000000000003','clear',null);
+select public.test_assert(not ((select value from jsonb_array_elements(public.classroom_activity(:'imported_cid')->'activity') value where value->>'problemId'=:'sum_pid') ? 'review'),'teacher can undo a review');
+select public.review_progress(:'sum_pid','00000000-0000-0000-0000-000000000003','reviewed',null);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.reopen_problem(:'sum_pid');
+reset role;
+select public.test_assert((select count(*) from public.progress_reviews where problem_id=:'sum_pid')=0,'reopening removes the review');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.rotate_invite(:'imported_cid') as new_code \gset
+select public.test_assert(:'new_code' <> :'imported_code','rotation issues a new code');
+select set_config('test.old_code',:'imported_code',false);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$ begin
+  begin perform public.join_classroom(current_setting('test.old_code')); raise exception 'old invite still works'; exception when others then if sqlerrm <> 'invalid_invite' then raise; end if; end;
+end; $$;
+select public.test_assert(public.join_classroom(:'new_code')=:'imported_cid'::uuid,'the new invite works');
+reset role;
 select 'Database assertions passed' as result;

@@ -137,6 +137,7 @@ describe('repositório da demonstração', () => {
         hintViews: [{ ordinal: 1, viewedAt: new Date(T0 + 200_000).toISOString() }],
         reportedAt: new Date(T0 + 300_000).toISOString(),
         verification: 'self_reported',
+        evidence: 'Somei.',
       },
       {
         studentId: DEMO_USER_ID,

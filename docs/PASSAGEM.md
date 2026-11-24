@@ -39,6 +39,44 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 4 / CC-25 (parcial)
+
+**Itens do backlog:** CC-25 (**parcial**: banco, repositório e métricas prontos; telas pendentes). A sessão parou pelo limite de uso.
+
+**Feito**
+
+- Migration `202611240003_teacher_review.sql`:
+  - tabela `progress_reviews` ligada à conclusão: reabrir apaga a revisão, e mudar a evidência a zera (trigger);
+  - RPC `review_progress(pid, sid, review_status, review_comment)`, só para o dono: `reviewed`, `changes_requested` (exige comentário) ou `clear`;
+  - RPC `rotate_invite(cid)`, só para o dono: o código antigo para de valer;
+  - `my_activity` e `classroom_activity` devolvem `review`.
+- `supabase/scripts/promote-teacher.sql`: script de operador para promover professor por e-mail.
+- Contrato: `ActivityRow.review`, `reviewProgress`, `rotateInvite` e os erros `report_required` / `invalid_review`, implementados no `DemoRepository` (turma fictícia somente leitura) e no `SupabaseRepository`. A atividade da demo passou a incluir a evidência.
+- Métricas: `reviewed` / `changesRequested` por aluno, revisão no mapa ("· revisada", "· ajuste pedido") e duas colunas novas no CSV.
+
+**Estado verificado**
+
+- `tsc` e 93 testes de unidade passaram.
+- `bash tests/test-db.sh` (PostgreSQL 18.1): passou, com as verificações de revisão e convite:
+  - não se revisa sem conclusão, e pedir ajuste exige comentário;
+  - o aluno lê o retorno;
+  - evidência nova zera a revisão, reabrir apaga e o professor pode desfazer;
+  - aluno e outro professor recebem negação;
+  - o código antigo falha e o novo funciona.
+- **Não executados nesta entrada:** E2E e checagem do bundle (as telas não mudaram).
+
+**Próximo passo esperado (falta para fechar CC-25)**
+
+1. **Detalhe do aluno no painel:** em `ClassMetrics`, o nome do aluno vira botão que abre um modal com cada questão, a evidência, a revisão e as ações "Marcar como revisada", "Pedir ajuste" (com comentário) e "Desfazer revisão". Depois de agir, recarregar com `retry`. Na turma fictícia, só leitura.
+2. **Tela do desafio:** mostrar ao aluno o retorno (`activityByProblem[id].review`) na área de envio.
+3. **Turmas:** botão "Gerar novo código" nas turmas do professor, com `ConfirmModal` e `repository.rotateInvite`.
+4. Opcional: evidências e revisões de exemplo na turma fictícia (`src/data/fictitiousClass.ts`).
+5. Testes de unidade dos métodos novos, E2E (pedir ajuste → aluno vê → reescreve → revisão zera; trocar convite), revisão visual, docs (ENTREGA-4, PLANO, VALIDACAO, ARQUITETURA) e commit "CC-25".
+
+**Bloqueios**
+
+- Nenhum para terminar a fatia. E1 (Supabase) continua aberta para homologar.
+
 ### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 3 / CC-24
 
 **Itens do backlog:** CC-24 (concluído); CC-05 fica atendido por ele

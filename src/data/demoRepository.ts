@@ -62,6 +62,7 @@ export function createDemoRepository(
       .filter(([problemId]) => !problemIds || problemIds.has(problemId))
       .map(([problemId, startedAt]): ActivityRow => {
         const report = s.reports[problemId];
+        const review = report && s.reviews?.[problemId];
         return {
           studentId: DEMO_USER_ID,
           problemId,
@@ -73,10 +74,25 @@ export function createDemoRepository(
           ...(report && {
             reportedAt: iso(report.reportedAt),
             verification: 'self_reported' as const,
+            evidence: report.evidence,
+          }),
+          ...(review && {
+            review: {
+              status: review.status,
+              ...(review.comment && { comment: review.comment }),
+              reviewedAt: iso(review.reviewedAt),
+            },
           }),
         };
       });
   }
+  /** Removes the review of a problem, as the database does when the completion changes. */
+  const withoutReview = (s: DemoState, problemId: string): DemoState => {
+    if (!s.reviews?.[problemId]) return s;
+    const reviews = { ...s.reviews };
+    delete reviews[problemId];
+    return { ...s, reviews };
+  };
   return {
     mode: 'demo',
     async getProfile() {
@@ -221,22 +237,58 @@ export function createDemoRepository(
       const text = evidence.trim();
       if (!text || text.length > 2000) throw new RepositoryError('invalid_evidence');
       if (!state().startedAt[problemId]) throw new RepositoryError('attempt_required');
-      store.update((s) => ({
-        ...s,
-        reports: {
-          ...s.reports,
-          // Like the database, editing the evidence keeps the original report time.
-          [problemId]: { evidence: text, reportedAt: s.reports[problemId]?.reportedAt ?? now() },
-        },
-      }));
+      store.update((s) => {
+        const changed = s.reports[problemId]?.evidence !== text;
+        const next = {
+          ...s,
+          reports: {
+            ...s.reports,
+            // Like the database, editing the evidence keeps the original report time.
+            [problemId]: { evidence: text, reportedAt: s.reports[problemId]?.reportedAt ?? now() },
+          },
+        };
+        // New evidence needs a new look from the teacher.
+        return changed ? withoutReview(next, problemId) : next;
+      });
     },
     async reopenProblem(problemId) {
       store.update((s) => {
         if (!s.reports[problemId]) return s;
         const reports = { ...s.reports };
         delete reports[problemId];
-        return { ...s, reports };
+        return withoutReview({ ...s, reports }, problemId);
       });
+    },
+    async reviewProgress(problemId, studentId, status, comment) {
+      requireTeacher();
+      // The fictitious class is read-only; the local identity is the only real student.
+      if (studentId !== DEMO_USER_ID) throw new RepositoryError('owner_required');
+      if (!state().reports[problemId]) throw new RepositoryError('report_required');
+      if (status === 'clear') {
+        store.update((s) => withoutReview(s, problemId));
+        return;
+      }
+      const text = comment?.trim() ?? '';
+      if ((status === 'changes_requested' && !text) || text.length > 1000)
+        throw new RepositoryError('invalid_review');
+      store.update((s) => ({
+        ...s,
+        reviews: {
+          ...s.reviews,
+          [problemId]: { status, ...(text && { comment: text }), reviewedAt: now() },
+        },
+      }));
+    },
+    async rotateInvite(classroomId) {
+      requireTeacher();
+      if (!state().classes.some((c) => c.id === classroomId))
+        throw new RepositoryError('owner_required');
+      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+      store.update((s) => ({
+        ...s,
+        classes: s.classes.map((c) => (c.id === classroomId ? { ...c, code } : c)),
+      }));
+      return code;
     },
     async myActivity() {
       return activityRows();

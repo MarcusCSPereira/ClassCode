@@ -211,7 +211,7 @@ describe('exportação CSV', () => {
     expect(lines[0].split(';')).toContain('Conclusões autodeclaradas');
     expect(lines[0]).toContain('Sinais de atenção (não são nota)');
     expect(lines[1]).toBe(
-      'Ana;31/10/2026, 15:00;3;2;67;0,5;50;25;12/11/2026, 14:00;Laços & simulação;',
+      'Ana;31/10/2026, 15:00;3;2;0;0;67;0,5;50;25;12/11/2026, 14:00;Laços & simulação;',
     );
     expect(lines[5]).toContain(';2,7;0;');
     expect(lines[5].endsWith('Média de 2,7 dicas em 3 conclusões.')).toBe(true);

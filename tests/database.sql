@@ -134,4 +134,26 @@ select public.test_assert((select value->>'code' from jsonb_array_elements(:'stu
 select public.list_problems() as student_problems \gset
 select public.test_assert(jsonb_array_length(:'student_problems'::jsonb)=8,'student lists only problems from joined classroom');
 reset role;
+-- Judge cases (202611240001): only the service role reads them, after the access check.
+select public.test_assert(not has_function_privilege('authenticated','public.judge_cases(uuid,uuid)','execute'),'students cannot read judge cases');
+select public.test_assert(not has_function_privilege('anon','public.judge_cases(uuid,uuid)','execute'),'anonymous cannot read judge cases');
+select public.test_assert(has_function_privilege('service_role','public.judge_cases(uuid,uuid)','execute'),'judge function reads cases');
+select public.test_assert((select count(*) from private.base_problem_template_tests)=31,'seed has the 31 base trail cases');
+select public.test_assert((select count(*) from private.problem_tests t join private.classroom_base_imports i on i.problem_id=t.problem_id where i.classroom_id=:'imported_cid')=31,'imported trail carries all judge cases');
+select problem_id as sum_pid from private.classroom_base_imports where classroom_id=:'imported_cid' and template_key='sum' \gset
+insert into public.problems(classroom_id,module_id,title,difficulty,minutes,objective,statement,input_spec,output_spec,constraints_spec,example_input,example_output)
+values (:'imported_cid','foundations','Rascunho do professor','basic',10,'o','s','i','o','c','5','5') returning id as draft_pid \gset
+select set_config('test.sum_pid',:'sum_pid',false), set_config('test.draft_pid',:'draft_pid',false);
+set role service_role;
+select public.judge_cases(:'sum_pid','00000000-0000-0000-0000-000000000003') as student_cases \gset
+select public.test_assert(jsonb_array_length(:'student_cases'::jsonb)=4 and (:'student_cases'::jsonb->0->>'isExample')::boolean,'enrolled student runs hidden cases, example first');
+select public.test_assert(jsonb_array_length(public.judge_cases(:'remote_pid','00000000-0000-0000-0000-000000000003'))=1,'problem without stored cases falls back to its example');
+select public.test_assert(jsonb_array_length(public.judge_cases(:'draft_pid','00000000-0000-0000-0000-000000000001'))=1,'owner runs cases of a draft');
+do $$ begin
+  begin perform public.judge_cases(current_setting('test.sum_pid')::uuid,'00000000-0000-0000-0000-000000000002'); raise exception 'student of another class read judge cases'; exception when insufficient_privilege then null; end;
+  begin perform public.judge_cases(current_setting('test.sum_pid')::uuid,'00000000-0000-0000-0000-000000000004'); raise exception 'another teacher read judge cases'; exception when insufficient_privilege then null; end;
+  begin perform public.judge_cases(current_setting('test.draft_pid')::uuid,'00000000-0000-0000-0000-000000000003'); raise exception 'student ran a draft'; exception when insufficient_privilege then null; end;
+  begin perform public.judge_cases(current_setting('test.sum_pid')::uuid,null); raise exception 'anonymous requester read judge cases'; exception when insufficient_privilege then null; end;
+end; $$;
+reset role;
 select 'Database assertions passed' as result;

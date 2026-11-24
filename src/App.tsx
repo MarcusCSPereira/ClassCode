@@ -19,7 +19,7 @@ import {
   Waypoints,
   X,
 } from 'lucide-react';
-import { dataConfigurationError, dataMode, demoStore, repository, supabase } from './data';
+import { dataConfigurationError, dataMode, demoStore, judge, repository, supabase } from './data';
 import { FICTITIOUS_CLASS } from './data/fictitiousClass';
 import {
   describeError,
@@ -445,6 +445,7 @@ export default function App() {
             <ProblemPage
               key={activeProblem.id}
               problem={activeProblem}
+              judge={judge}
               startedAt={
                 dataMode === 'remote'
                   ? Date.parse(activityByProblem[activeProblem.id]?.startedAt ?? '') || undefined

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { modules, starters } from '../lib/catalog';
 import { remainingHintSeconds } from '../lib/domain';
-import { judgeGateway, verdictLabel, type JudgeGateway, type SubmissionResult } from '../lib/judge';
+import { verdictLabel, type JudgeGateway, type SubmissionResult } from '../lib/judge';
 import type { HintOrdinal, Language } from '../lib/types';
 import type { Theme } from '../lib/useTheme';
 import type { ProblemSummary } from '../data/repository';
@@ -35,7 +35,7 @@ export default function ProblemPage({
   theme,
   storageError,
   tab,
-  gateway = judgeGateway,
+  judge,
   onTabChange,
   onLanguageChange,
   onDraftChange,
@@ -53,7 +53,8 @@ export default function ProblemPage({
   theme: Theme;
   storageError: boolean;
   tab: ProblemTab;
-  gateway?: JudgeGateway;
+  /** Null when this build has no judge (static hosting); execution is then unavailable. */
+  judge: JudgeGateway | null;
   onTabChange: (tab: ProblemTab) => void;
   onLanguageChange: (language: Language) => void;
   onDraftChange: (value: string) => void;
@@ -86,16 +87,14 @@ export default function ProblemPage({
   useEffect(() => viewedHints.forEach(loadHint), [viewedHints.join()]);
 
   async function runJudge() {
+    if (!judge) return;
     setSubmitting(true);
     setSubmissionError(null);
     try {
-      const result = await gateway.submit({
+      const result = await judge.submit({
         problemId: problem.id,
-        problemTitle: problem.title,
         language,
         sourceCode: draft ?? starters[language],
-        stdin: problem.exampleInput,
-        expectedOutput: problem.exampleOutput,
         idempotencyKey: crypto.randomUUID(),
       });
       setSubmissionResult(result);
@@ -254,10 +253,12 @@ export default function ProblemPage({
             <div className="submission-info">
               <CircleHelp size={18} />
               <p>
-                Execute sua solução nos casos de teste via Judge0 ou{' '}
+                {judge
+                  ? 'Execute sua solução nos casos de teste via Judge0 ou '
+                  : 'A execução de código não está disponível nesta publicação. '}
                 {problem.externalUrl
-                  ? 'envie no judge de origem e registre seu progresso aqui.'
-                  : 'valide com seu professor e registre seu progresso.'}
+                  ? 'Envie no judge de origem e registre seu progresso aqui.'
+                  : 'Valide com seu professor e registre seu progresso.'}
               </p>
             </div>
             {submissionError && (
@@ -297,7 +298,8 @@ export default function ProblemPage({
               <button
                 type="button"
                 className="button primary full"
-                disabled={submitting}
+                disabled={submitting || !judge}
+                title={judge ? undefined : 'Execução indisponível nesta publicação'}
                 onClick={() => void runJudge()}
               >
                 <Play size={16} />

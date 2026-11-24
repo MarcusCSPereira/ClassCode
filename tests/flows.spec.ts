@@ -330,3 +330,39 @@ test('turma fictícia demonstra o painel e se identifica como fictícia', async 
   await nav(page, 'Minhas turmas');
   await expect(page.getByText('dados fictícios')).toHaveCount(0);
 });
+
+test('executar código envia só o código e mostra o veredito ou um erro claro', async ({ page }) => {
+  const bodies: Record<string, unknown>[] = [];
+  let status = 200;
+  await page.route('**/api/judge/submit', async (route) => {
+    bodies.push(route.request().postDataJSON() as Record<string, unknown>);
+    if (status !== 200) return route.fulfill({ status, json: { error: 'not_found' } });
+    await route.fulfill({
+      json: {
+        id: 'e2e',
+        verdict: 'wrong_answer',
+        createdAt: '2026-11-24T00:00:00.000Z',
+        passedCases: 1,
+        totalCases: 4,
+        stdout: '20\n',
+      },
+    });
+  });
+  await page.goto('/#problem/sum');
+  await page.getByRole('button', { name: 'Executar código' }).click();
+  const result = page.getByRole('status', { name: 'Resultado do Judge0' });
+  await expect(result).toContainText('Resposta incorreta');
+  await expect(result).toContainText('Casos: 1/4');
+  expect(bodies[0]).toMatchObject({ problemId: 'sum', language: 'python' });
+  // Catalog cases stay on the server: the browser sends no inputs or expected outputs.
+  expect(Object.keys(bodies[0]).sort()).toEqual([
+    'idempotencyKey',
+    'language',
+    'problemId',
+    'sourceCode',
+  ]);
+
+  status = 404;
+  await page.getByRole('button', { name: 'Executar código' }).click();
+  await expect(page.getByRole('alert')).toContainText('judge-submit foi publicada');
+});

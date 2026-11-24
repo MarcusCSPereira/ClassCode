@@ -2,6 +2,8 @@
 
 Data de partida: **02/11/2026**. Meta de planejamento: **15/11/2026**, adotada como referência para “meio de novembro”, sem depender de um número de integrantes.
 
+> **Atualização em 24/11/2026:** a meta de 15/11 passou e o novo prazo ainda não foi definido (decisão E3 da [Entrega 4](ENTREGA-4.md#6-decisões-pendentes-do-time)). A Entrega 4 fecha o fluxo do professor de ponta a ponta; itens CC-22 a CC-25 abaixo.
+
 ## Resultado esperado para a apresentação
 
 Um professor autenticado cria uma turma e uma questão. Um aluno em outro navegador entra pelo código, acessa a questão, recebe dicas no tempo correto, resolve no judge externo e registra evidência. A trilha recomenda automaticamente o próximo passo conforme o aluno conclui módulos e usa dicas. O professor vê métricas de uso da própria turma. Uma visualização permite explicar o algoritmo durante a apresentação.
@@ -68,6 +70,15 @@ Itens adicionados na Entrega 2. Regras, contratos e critérios completos em [ENT
 | CC-19 | P0         | Painel de métricas do professor com mapa aluno × questão e CSV. **Concluído em 02/11 no modo demo**                               | CC-00, CC-17, CC-18 |
 | CC-20 | P0         | **Concluído localmente:** sete modelos privados e importação idempotente ao criar turma remota; falta homologação real            | CC-05               |
 | CC-21 | P1         | Turma fictícia no modo demo para demonstrar o painel, identificada como tal. **Concluído em 02/11**                               | CC-19               |
+
+Itens adicionados na Entrega 4. Diagnóstico, fluxo e critérios em [ENTREGA-4.md](ENTREGA-4.md#5-fatias).
+
+| ID    | Prioridade | Entrega e critério de aceite                                                                                                                                      | Dependências |
+| ----- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| CC-22 | P0         | Judge confiável: endereço configurável, botão desabilitado sem judge, casos de teste no servidor com acesso conferido, checagem do bundle. **Concluído em 24/11** | CC-13        |
+| CC-23 | P1         | Submissões salvas, limite de frequência e "Aceito" como conclusão verificada no painel                                                                            | CC-22, CC-01 |
+| CC-24 | P0         | Ciclo da questão: rascunho, casos ocultos, validação com solução de referência, publicar, editar e arquivar                                                       | CC-22        |
+| CC-25 | P0         | Revisão do aluno com comentário, troca do código de convite e script de promoção de professor                                                                     | CC-19        |
 
 P0 é o MVP; P1 melhora a experiência quando o fluxo estiver estável; P2 não bloqueia a apresentação. Cada integrante assume uma entrega ou grupo coerente conforme disponibilidade, sem pressupor uma equipe específica.
 

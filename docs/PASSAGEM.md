@@ -39,6 +39,58 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 1 / CC-22
+
+**Itens do backlog:** análise da Entrega 4 ([ENTREGA-4.md](ENTREGA-4.md)) e CC-22 (concluído)
+
+**Feito**
+
+- **Análise da `main` (`db61880`):** o "Executar código" só funcionava no `npm run dev`. No site publicado dava "HTTP 405" (404 em outras hospedagens), porque `/api/judge/submit` só existe no servidor do Vite. Diagnóstico, fluxo do professor e fatias em [ENTREGA-4.md](ENTREGA-4.md).
+- **Judge dividido entre navegador e servidor:**
+  - `src/lib/judge.ts` (navegador) escolhe o endereço, envia só o código e traduz erros (404/405 → "confira se a função judge-submit foi publicada").
+  - `supabase/functions/_shared/judge0.ts` executa no Judge0 e nunca devolve a saída de caso oculto.
+  - `supabase/functions/_shared/judgeHandler.ts` valida o corpo e responde 400/401/403/422/502.
+  - Os dois arquivos de `_shared` servem tanto o servidor local quanto a função.
+- **Endereço:** `VITE_JUDGE_URL`. Vazio = servidor local no `npm run dev`, função `judge-submit` no modo remoto e **nenhum judge no build estático** (botão desabilitado com explicação); `off` desliga.
+- **Casos de teste no servidor:**
+  - a migration `202611240001_judge_tests.sql` cria `private.problem_tests` e os casos dos modelos da trilha, copiados ao importar a trilha;
+  - a RPC `judge_cases(pid, requester)` só pode ser chamada com a chave de serviço e aceita o dono da turma (inclusive rascunho) ou um aluno matriculado em questão publicada;
+  - o seed traz os 31 casos e preenche turmas importadas antes;
+  - a ligação deixou de depender do título da questão.
+- **Edge Function:** identifica o aluno pela sessão (`/auth/v1/user`) e busca os casos pela RPC; só importa arquivos de `supabase/functions/`.
+- **Servidor local:** casos do catálogo em `src/server/demoJudgeCases.ts` (a interface não importa). Questões criadas na demo local mandam os próprios casos na requisição.
+- `scripts/check-bundle.mjs` entrou no `npm run check`: falha se um caso oculto aparecer no bundle.
+- `tests/test-db.sh` roda no Windows (Git Bash) usando `127.0.0.1:54329`.
+- README, ARQUITETURA, JUDGE-API, PLANO (CC-22 a CC-25 e aviso de prazo vencido), VALIDACAO e `.env.example` atualizados.
+
+**Estado verificado**
+
+- `npm run check`: TypeScript, 87 testes de unidade, build e checagem do bundle passaram.
+- `npm run test:e2e`: 24 de 24.
+- `bash tests/test-db.sh` com PostgreSQL 18.1 no Windows: passou, com as verificações novas de `judge_cases`.
+- Servidor local real: 400, 422 e 405 conferidos com `curl`.
+- Não verificado: deploy da função, Judge0 real e Supabase real.
+
+**Decisões tomadas**
+
+- O contrato `JudgeGateway` perdeu `getResult`: nenhuma tela usava e a função responde de forma síncrona.
+- No modo remoto sem `VITE_JUDGE_URL`, o padrão é a função do próprio projeto: quem publica as migrations publica também a função.
+- Correção da análise inicial: o bundle publicado **não** continha casos ocultos (o minificador os removia); o risco era o módulo compartilhado com a tela.
+
+**Ficou de fora / limites conhecidos**
+
+- Resultado do judge não é salvo e não há limite de frequência (fatia 2 / CC-23, fora desta rodada).
+- Questões criadas na demo local ainda só têm o exemplo como caso; a fatia 3 acrescenta casos ocultos no editor.
+
+**Próximo passo esperado**
+
+1. Fatia 3 (CC-24) nesta mesma branch: rascunho, casos ocultos no editor, validação com solução de referência, publicar, editar e arquivar.
+2. Quem tiver o projeto Supabase: aplicar a migration nova e o seed, publicar `judge-submit` (passo a passo em [JUDGE-API.md](JUDGE-API.md#publicar-no-supabase)) e testar um envio real.
+
+**Bloqueios**
+
+- E1 (projeto Supabase) e E2 (qual Judge0) continuam abertas para homologar.
+
 ### 10/11/2026 · `codex/cc-03-remote-attempt-hints` · Codex · CC-02/03/04/05/06/07/18/20
 
 **Itens do backlog:** recomendações pendentes da passagem de Lucca concluídas no código e no banco local; homologação em Supabase real bloqueada por ausência de projeto/credenciais

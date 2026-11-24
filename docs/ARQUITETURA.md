@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-SPA em React/TypeScript/Vite com dois modos explícitos. `VITE_DATA_MODE=demo` usa `localStorage` em `classcode.demo.v1`; `VITE_DATA_MODE=remote` usa Supabase Auth e somente RPCs públicas controladas. Não existe integração Judge0. `src/lib/types.ts` continua sendo o contrato da interface, não um modelo gerado do banco.
+SPA em React/TypeScript/Vite com dois modos explícitos. `VITE_DATA_MODE=demo` usa `localStorage` em `classcode.demo.v1`; `VITE_DATA_MODE=remote` usa Supabase Auth e somente RPCs públicas controladas. A execução de código usa Judge0 por um servidor, o local do `npm run dev` ou a Edge Function `judge-submit` ([JUDGE-API.md](JUDGE-API.md)); o site estático publicado não tem judge. `src/lib/types.ts` continua sendo o contrato da interface, não um modelo gerado do banco.
 
 Cada tela fica em `src/pages/`, cada modal em `src/modals/`, e as operações persistentes passam pela interface `ClassCodeRepository`. O `DemoRepository` usa a store local; o `SupabaseRepository` mapeia todos os métodos do contrato para RPCs e valida os payloads antes de entregá-los à UI. No remoto, perfil, turmas, questões e atividade são carregados do servidor; apenas rascunhos de código e reflexões do laboratório permanecem locais.
 
@@ -12,10 +12,9 @@ flowchart LR
   A --> S[Supabase Auth + RPC]
   S --> P[(PostgreSQL + RLS)]
   A --> E[Judge externo: outra aba]
-  A -. Extensão .-> G[Gateway autenticado]
-  G --> Q[Fila + worker]
-  Q --> J[Judge0 isolado]
-  Q --> P
+  A --> G[Edge Function judge-submit]
+  G -->|judge_cases, chave de serviço| P
+  G --> J[Judge0]
 ```
 
 ## Backend fornecido
@@ -101,21 +100,19 @@ O schema já nega acesso aos dados privados por padrão; as funcionalidades acim
 7. Introduzir estados `loading`, `empty`, `error`, retry e sessão expirada em cada consulta.
 8. Adicionar comparação de dados entre dois navegadores e testes de acesso direto à API.
 
-## Judge integrado: contrato futuro
+## Judge integrado
 
-O contrato `JudgeGateway` em `src/lib/judge.ts` prevê submissão e consulta de resultado. Não possui implementação falsa de Accepted.
+Implementado em [JUDGE-API.md](JUDGE-API.md). Situação dos passos do fluxo planejado:
 
-Fluxo recomendado:
-
-1. Cliente envia `problemId`, linguagem, código e chave de idempotência para gateway autenticado.
-2. Servidor verifica matrícula, questão publicada, tamanho, quotas e linguagem permitida.
-3. Cria submissão `queued`; guarda código com política de retenção definida.
-4. Worker lê testes privados, descobre/mapeia linguagens na instância Judge0 e executa com limites.
-5. Worker agrega resultados, persiste veredito e atualiza progresso verificado; callbacks/polling são validados no servidor.
-6. Cliente consulta apenas suas submissões; professor consulta as da própria turma. Não devolver testes ocultos completos.
+1. ✅ Cliente envia `problemId`, linguagem, código e chave de idempotência. Sem casos de teste, exceto questões que só existem na demo local.
+2. ⚠️ Servidor verifica sessão, matrícula ou dono, questão publicada (o dono roda rascunhos), tamanho e linguagem. **Faltam quotas e limite de frequência.**
+3. ❌ Submissão persistida: fatia 2 da [Entrega 4](ENTREGA-4.md).
+4. ✅ Casos privados em `private.problem_tests`, lidos só pela função com a chave de serviço; execução síncrona com limites de CPU e memória.
+5. ❌ Veredito persistido e progresso verificado: fatia 2.
+6. ✅ Nunca devolve saída de caso oculto; ❌ consulta de submissões pelo professor depende da fatia 2.
 
 Não rodar `exec`, `eval`, compiladores ou processos dos alunos no processo web. Não enviar credenciais Judge0 no bundle. Não aceitar veredito vindo do navegador. O visualizador não deve executar código do editor: ele reproduz frames determinísticos de algoritmos conhecidos.
 
 ## Hospedagem
 
-Demonstração: build estático em GitHub Pages. Futuro: manter frontend estático, Supabase para Auth/PostgreSQL e gateway/worker separado para execução. O Pages não hospeda APIs ou workers de judge. Valores de ambiente `VITE_*` são públicos durante o build; apenas URL e chave publicável podem entrar ali.
+Demonstração: build estático em GitHub Pages, sem judge: o botão de execução aparece desabilitado com explicação. Remoto: frontend estático, Supabase para Auth/PostgreSQL e a Edge Function `judge-submit` para execução. O Pages não hospeda APIs. Valores de ambiente `VITE_*` são públicos durante o build; apenas URL e chave publicável podem entrar ali.

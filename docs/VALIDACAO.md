@@ -99,3 +99,15 @@ Turma fictícia para demonstrar o painel do professor.
 - PostgreSQL 16.13 temporário: migrations, seed e testes cobrem Auth emulado, negações, listagens isoladas, publicação, evidência/reabertura, atividade e importação idempotente dos sete modelos privados.
 - Playwright: **22 de 22** fluxos passaram em desktop e celular, preservando o modo demo. O novo cenário abre o laboratório a partir de `binary` e confirma a persistência da previsão/explicação ao navegar e recarregar. O loop de atualização observado anteriormente foi corrigido e o aviso não reapareceu na execução final.
 - Não executado: aplicação das migrations em Supabase real e testes via JWT/PostgREST em dois navegadores. Este ambiente não possui `.env` nem acesso configurado a um projeto Supabase; isso continua sendo condição de aceite de CC-01/09, não deve ser substituído pelo Auth emulado.
+
+## Entrega 4 · fatia 1 / CC-22 (24/11/2026)
+
+Judge confiável: endereço configurável, casos de teste no servidor e checagem do bundle.
+
+- `npm run check`: TypeScript, **87 testes de unidade em 10 arquivos**, build e a nova checagem `scripts/check-bundle.mjs`. Os testes novos cobrem a escolha do endereço, o envio só do código com cabeçalhos de sessão, a tradução de erros HTTP e de rede, o executor do Judge0 (todos os casos, parada no primeiro erro sem devolver saída oculta, polling), a validação do corpo, os códigos 401/403/422/502 do tratador e a igualdade entre os casos do seed e os da demo.
+- A checagem do bundle acusou amostras sintéticas de vazamento nos dois formatos (`\n` escapado e quebra de linha real) e passou no build atual. O primeiro filtro dava falso positivo com `999999999`, presente numa tabela numérica de biblioteca; agora só valores com mais de uma palavra contam.
+- `npm run test:e2e`: **24 de 24** (12 cenários × desktop e celular). O novo cenário intercepta `/api/judge/submit`: confere que o envio leva só `problemId`, `language`, `sourceCode` e `idempotencyKey`, que o veredito aparece e que um 404 vira a mensagem "judge-submit foi publicada".
+- Servidor local de verdade (`npm run dev`, sem interceptação): corpo inválido → 400, desafio sem casos → 422, `GET` → 405. Nenhuma chamada ao Judge0 público foi feita.
+- `bash tests/test-db.sh` em PostgreSQL 18.1 no Windows (o script agora usa `127.0.0.1:54329` no Git Bash): passou com as verificações novas de `judge_cases`. Só a chave de serviço executa a função; o aluno matriculado recebe os 4 casos de `sum` com o exemplo primeiro; o dono roda rascunho; aluno de outra turma, outro professor, aluno em rascunho e requisitante nulo recebem negação; a trilha importada recebe os 31 casos.
+- Site publicado (antes desta fatia): o botão respondia "Falha ao submeter código (HTTP 405)"; o bundle publicado não continha casos ocultos.
+- Não verificado: deploy da Edge Function e chamadas reais ao Judge0 e ao Supabase (sem projeto configurado).

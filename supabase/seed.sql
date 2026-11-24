@@ -54,3 +54,47 @@ on conflict(key) do update set
   output_spec=excluded.output_spec,constraints_spec=excluded.constraints_spec,
   example_input=excluded.example_input,example_output=excluded.example_output,
   external_url=excluded.external_url,hints=excluded.hints;
+
+-- Judge cases of the base trail templates. Ordinal 1 is the public example; the others are
+-- hidden. Keep in sync with src/server/demoJudgeCases.ts (a unit test compares both).
+insert into private.base_problem_template_tests(template_key,ordinal,stdin,expected_output,is_example) values
+('sum',1,E'12 8\n',E'20\n',true),
+('sum',2,E'0 0\n',E'0\n',false),
+('sum',3,E'1000000 1000000\n',E'2000000\n',false),
+('sum',4,E'42 58\n',E'100\n',false),
+('parity',1,E'7\n',E'IMPAR\n',true),
+('parity',2,E'0\n',E'PAR\n',false),
+('parity',3,E'2\n',E'PAR\n',false),
+('parity',4,E'1000000000\n',E'PAR\n',false),
+('parity',5,E'999999999\n',E'IMPAR\n',false),
+('maximum',1,E'4 9 6\n',E'9\n',true),
+('maximum',2,E'10 2 5\n',E'10\n',false),
+('maximum',3,E'1 2 3\n',E'3\n',false),
+('maximum',4,E'0 0 0\n',E'0\n',false),
+('maximum',5,E'1000 999 1000\n',E'1000\n',false),
+('weird',1,E'3\n',E'3 10 5 16 8 4 2 1\n',true),
+('weird',2,E'1\n',E'1\n',false),
+('weird',3,E'6\n',E'6 3 10 5 16 8 4 2 1\n',false),
+('weird',4,E'7\n',E'7 22 11 34 17 52 26 13 40 20 10 5 16 8 4 2 1\n',false),
+('missing',1,E'5\n2 3 1 5\n',E'4\n',true),
+('missing',2,E'2\n1\n',E'2\n',false),
+('missing',3,E'2\n2\n',E'1\n',false),
+('missing',4,E'6\n1 2 3 4 5\n',E'6\n',false),
+('distinct',1,E'5\n2 3 2 2 3\n',E'2\n',true),
+('distinct',2,E'1\n42\n',E'1\n',false),
+('distinct',3,E'4\n10 10 10 10\n',E'1\n',false),
+('distinct',4,E'6\n1 2 3 4 5 6\n',E'6\n',false),
+('binary',1,E'7 13\n2 5 8 13 19 24 31\n',E'3\n',true),
+('binary',2,E'7 2\n2 5 8 13 19 24 31\n',E'0\n',false),
+('binary',3,E'7 31\n2 5 8 13 19 24 31\n',E'6\n',false),
+('binary',4,E'7 10\n2 5 8 13 19 24 31\n',E'-1\n',false),
+('binary',5,E'1 5\n5\n',E'0\n',false)
+on conflict(template_key,ordinal) do update set
+  stdin=excluded.stdin,expected_output=excluded.expected_output,is_example=excluded.is_example;
+
+-- Trails imported before the judge cases existed receive them too. Safe to run again.
+insert into private.problem_tests(problem_id,ordinal,stdin,expected_output,is_example)
+select i.problem_id,t.ordinal,t.stdin,t.expected_output,t.is_example
+  from private.classroom_base_imports i
+  join private.base_problem_template_tests t on t.template_key = i.template_key
+on conflict (problem_id,ordinal) do nothing;

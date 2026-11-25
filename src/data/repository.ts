@@ -3,7 +3,7 @@
  * The demo implements it over localStorage; CC-03 adds the Supabase implementation.
  * Screens use this interface and never touch localStorage or Supabase directly.
  */
-import type { Classroom, HintOrdinal, Problem } from '../lib/types';
+import type { Classroom, HintOrdinal, Problem, ProblemStatus, ProblemTest } from '../lib/types';
 
 export interface UserProfile {
   id: string;
@@ -11,11 +11,23 @@ export interface UserProfile {
   role: 'student' | 'teacher';
 }
 
-/** A problem as the student receives it: release times only, never the hint text. */
-export type ProblemSummary = Omit<Problem, 'hints'> & { hints: { afterSeconds: number }[] };
+/** A problem as listed: release times only, never the hint text or the hidden cases. */
+export type ProblemSummary = Omit<Problem, 'hints' | 'tests'> & {
+  hints: { afterSeconds: number }[];
+};
 /** What the teacher submits; the data source assigns id and source. */
-export type NewProblem = Omit<Problem, 'id' | 'source' | 'authorClassId'> & {
+export type NewProblem = Omit<Problem, 'id' | 'source' | 'authorClassId' | 'status' | 'tests'> & {
   authorClassId: string;
+};
+/** What the editor saves: a new draft (no id) or changes to an owned problem. */
+export type ProblemInput = NewProblem & { id?: string; tests: ProblemTest[] };
+/** Everything the owner needs to edit a problem, hidden cases included. */
+export type EditableProblem = NewProblem & {
+  id: string;
+  tests: ProblemTest[];
+  status: ProblemStatus;
+  /** Students who already opened it; edits change the problem for them too. */
+  attempts: number;
 };
 /** One student × problem attempt. Timestamps are ISO strings from the data source clock. */
 export interface ActivityRow {
@@ -26,6 +38,15 @@ export interface ActivityRow {
   reportedAt?: string;
   verification?: 'self_reported';
   evidence?: string;
+  /** The teacher's review of the completion; cleared when the student changes the evidence. */
+  review?: ProgressReview;
+}
+export type ReviewStatus = 'reviewed' | 'changes_requested';
+export interface ProgressReview {
+  status: ReviewStatus;
+  /** Required when asking for changes; the student reads it on the problem page. */
+  comment?: string;
+  reviewedAt: string;
 }
 export interface RosterEntry {
   studentId: string;
@@ -47,8 +68,12 @@ export type RepositoryErrorCode =
   | 'attempt_required'
   | 'hint_locked'
   | 'invalid_problem'
-  | 'invalid_evidence';
+  | 'invalid_evidence'
+  | 'report_required'
+  | 'invalid_review';
 const messages: Record<RepositoryErrorCode, string> = {
+  report_required: 'O aluno ainda não registrou a conclusão deste desafio.',
+  invalid_review: 'Para pedir um ajuste, escreva um comentário de até 1000 caracteres.',
   authentication_required: 'Entre novamente para continuar.',
   teacher_required: 'Esta ação é exclusiva do professor.',
   owner_required: 'Somente o professor responsável pela turma pode fazer isso.',
@@ -79,8 +104,14 @@ export interface ClassCodeRepository {
   createClassroom(name: string, term: string): Promise<{ id: string; code: string }>;
   joinClassroom(code: string): Promise<string>;
   importBaseTrail(classroomId: string): Promise<number>;
+  /** Owners also receive their drafts and archived problems, marked by `status`. */
   listProblems(): Promise<ProblemSummary[]>;
+  /** Creates and publishes in one step (kept for compatibility; the UI uses saveProblem). */
   publishProblem(problem: NewProblem): Promise<string>;
+  /** Saves a new draft or edits an owned problem without changing its status. */
+  saveProblem(problem: ProblemInput): Promise<string>;
+  getProblemForEdit(problemId: string): Promise<EditableProblem>;
+  setProblemStatus(problemId: string, status: ProblemStatus): Promise<void>;
   /** Idempotent; resolves to the original start time. */
   startAttempt(problemId: string): Promise<string>;
   /** Records the first view and resolves to the hint text; rejects with `hint_locked` early. */
@@ -89,4 +120,13 @@ export interface ClassCodeRepository {
   reopenProblem(problemId: string): Promise<void>;
   myActivity(): Promise<ActivityRow[]>;
   classroomActivity(classroomId: string): Promise<ClassroomActivity>;
+  /** Owner only. `clear` removes the review; asking for changes requires a comment. */
+  reviewProgress(
+    problemId: string,
+    studentId: string,
+    status: ReviewStatus | 'clear',
+    comment?: string,
+  ): Promise<void>;
+  /** Owner only. The old code stops working at once; enrolled students stay. */
+  rotateInvite(classroomId: string): Promise<string>;
 }

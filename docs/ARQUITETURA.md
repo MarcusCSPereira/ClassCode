@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-SPA em React/TypeScript/Vite com dois modos explícitos. `VITE_DATA_MODE=demo` usa `localStorage` em `classcode.demo.v1`; `VITE_DATA_MODE=remote` usa Supabase Auth e somente RPCs públicas controladas. Não existe integração Judge0. `src/lib/types.ts` continua sendo o contrato da interface, não um modelo gerado do banco.
+SPA em React/TypeScript/Vite com dois modos explícitos. `VITE_DATA_MODE=demo` usa `localStorage` em `classcode.demo.v1`; `VITE_DATA_MODE=remote` usa Supabase Auth e somente RPCs públicas controladas. A execução de código usa Judge0 por um servidor, o local do `npm run dev` ou a Edge Function `judge-submit` ([JUDGE-API.md](JUDGE-API.md)); o site estático publicado não tem judge. `src/lib/types.ts` continua sendo o contrato da interface, não um modelo gerado do banco.
 
 Cada tela fica em `src/pages/`, cada modal em `src/modals/`, e as operações persistentes passam pela interface `ClassCodeRepository`. O `DemoRepository` usa a store local; o `SupabaseRepository` mapeia todos os métodos do contrato para RPCs e valida os payloads antes de entregá-los à UI. No remoto, perfil, turmas, questões e atividade são carregados do servidor; apenas rascunhos de código e reflexões do laboratório permanecem locais.
 
@@ -12,10 +12,9 @@ flowchart LR
   A --> S[Supabase Auth + RPC]
   S --> P[(PostgreSQL + RLS)]
   A --> E[Judge externo: outra aba]
-  A -. Extensão .-> G[Gateway autenticado]
-  G --> Q[Fila + worker]
-  Q --> J[Judge0 isolado]
-  Q --> P
+  A --> G[Edge Function judge-submit]
+  G -->|judge_cases, chave de serviço| P
+  G --> J[Judge0]
 ```
 
 ## Backend fornecido
@@ -52,32 +51,44 @@ erDiagram
 
 ### RPCs implementadas no SQL
 
-| Chamada                                                         | Resultado/garantia                                                                             |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `create_classroom(class_name, class_term)`                      | Professor cria turma e recebe `{id, code}`                                                     |
-| `join_classroom(invite_code)`                                   | Matrícula idempotente pelo código; retorna UUID da turma                                       |
-| `start_attempt(pid)`                                            | Cria tentativa ou devolve o mesmo início existente                                             |
-| `set_problem_hints(pid, hints text[])`                          | Proprietário configura exatamente 3 dicas, com atrasos fixados no servidor                     |
-| `get_hint(pid, hint_number)`                                    | Verifica turma, publicação e tempo; retorna somente a dica liberada e registra leitura         |
-| `my_profile()`                                                  | Identidade e papel definidos pelo servidor                                                     |
-| `list_classrooms()` / `list_problems()`                         | Leituras filtradas pela propriedade/matrícula, sem expor convites ou textos de dicas indevidos |
-| `publish_problem(payload)`                                      | Valida, cria rascunho, configura três dicas e publica atomicamente                             |
-| `report_progress(pid, report_evidence)` / `reopen_problem(pid)` | Registra ou remove conclusão autodeclarada                                                     |
-| `my_activity()` / `classroom_activity(cid)`                     | Atividade do aluno e relatório restrito ao proprietário                                        |
-| `import_base_trail(cid)`                                        | Importa os sete modelos privados uma única vez por turma                                       |
+| Chamada                                                         | Resultado/garantia                                                                                 |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `create_classroom(class_name, class_term)`                      | Professor cria turma e recebe `{id, code}`                                                         |
+| `join_classroom(invite_code)`                                   | Matrícula idempotente pelo código; retorna UUID da turma                                           |
+| `start_attempt(pid)`                                            | Cria tentativa ou devolve o mesmo início existente                                                 |
+| `set_problem_hints(pid, hints text[])`                          | Proprietário configura exatamente 3 dicas, com atrasos fixados no servidor                         |
+| `get_hint(pid, hint_number)`                                    | Verifica turma, publicação e tempo; retorna somente a dica liberada e registra leitura             |
+| `my_profile()`                                                  | Identidade e papel definidos pelo servidor                                                         |
+| `list_classrooms()` / `list_problems()`                         | Leituras filtradas pela propriedade/matrícula, sem expor convites ou textos de dicas indevidos     |
+| `publish_problem(payload)`                                      | Valida, cria rascunho, configura três dicas e publica atomicamente                                 |
+| `report_progress(pid, report_evidence)` / `reopen_problem(pid)` | Registra ou remove conclusão autodeclarada                                                         |
+| `my_activity()` / `classroom_activity(cid)`                     | Atividade do aluno e relatório restrito ao proprietário                                            |
+| `import_base_trail(cid)`                                        | Importa os sete modelos privados uma única vez por turma, com seus casos de teste                  |
+| `save_problem(payload)`                                         | Cria rascunho ou edita questão própria (campos, 3 dicas e até 19 casos ocultos) sem mudar o estado |
+| `get_problem_for_edit(pid)`                                     | Só o dono: questão completa com texto das dicas, casos ocultos, estado e nº de alunos que abriram  |
+| `set_problem_status(pid, new_status)`                           | Só o dono: `draft`, `published` ou `archived` (arquivar despublica e pode ser desfeito)            |
+| `judge_cases(pid, requester)`                                   | Só a chave de serviço (função do judge): casos de teste se o requisitante for dono ou matriculado  |
+| `review_progress(pid, sid, review_status, review_comment)`      | Só o dono da turma: `reviewed`, `changes_requested` (exige comentário) ou `clear`; exige conclusão |
+| `rotate_invite(cid)`                                            | Só o dono: gera um novo código de convite; o anterior deixa de valer e as matrículas continuam     |
 
-Publicar uma questão requer inserir `published=false`, configurar as dicas e atualizar `published=true`. Um trigger impede publicação sem as três dicas. O time deve encapsular esse fluxo em um serviço de aplicação e tratar falhas, evitando deixar a UI em estado indefinido.
+Ciclo da questão (Entrega 4, CC-24): `save_problem` cria o rascunho, `get_problem_for_edit` o reabre para edição e `set_problem_status` publica, arquiva ou restaura. Um trigger impede publicar sem as três dicas. `list_problems` devolve ao dono os rascunhos e as arquivadas (campo `status`) e aos alunos só as publicadas. `publish_problem` continua existindo para compatibilidade, mas a interface não o usa mais.
+
+Revisão do professor (Entrega 4, CC-25):
+
+- A tabela `public.progress_reviews` (uma linha por aluno e questão) guarda a revisão da conclusão autodeclarada, separada dela.
+- Um trigger apaga a revisão quando a evidência muda, e reabrir o desafio a apaga junto com a conclusão.
+- `my_activity` e `classroom_activity` devolvem o campo `review` (`status`, `comment`, `reviewedAt`): o aluno vê a própria, e o dono vê as da turma.
+- No cliente, o método do repositório é `reviewProgress(problemId, studentId, status, comment?)`. O `DemoRepository` aplica as mesmas regras, e a turma fictícia é somente leitura.
 
 ### Provisionamento de professor
 
-O navegador não recebe privilégio de alterar `profiles.role`. Inicialmente, um operador confiável promove o usuário no SQL Editor do ambiente de desenvolvimento, por UUID:
+O navegador não recebe privilégio de alterar `profiles.role`. Um operador confiável (dono do projeto) promove o usuário no SQL Editor com o script [`supabase/scripts/promote-teacher.sql`](../supabase/scripts/promote-teacher.sql):
 
-```sql
--- Substituir o UUID pelo usuário correto; executar somente como operador do banco.
-update public.profiles set role = 'teacher' where id = '<UUID_DO_USUARIO>';
-```
+1. A pessoa cria a conta pela tela de cadastro; contas nascem como estudante.
+2. O operador troca o e-mail no script e executa. O script devolve o perfil alterado, e nenhuma linha significa que o e-mail não tem conta.
+3. Para revogar, o operador executa o mesmo comando com `role = 'student'`. As turmas do professor continuam com ele, e transferi-las é uma decisão manual à parte.
 
-Isso é um procedimento de operação inicial, não um endpoint a expor no cliente. Em produção, definir autorização institucional para provisionamento e revogação de professores.
+Isso é um procedimento de operação, não um endpoint a expor no cliente. Em produção, definir autorização institucional para provisionamento e revogação de professores.
 
 ### O que falta no backend
 
@@ -101,21 +112,19 @@ O schema já nega acesso aos dados privados por padrão; as funcionalidades acim
 7. Introduzir estados `loading`, `empty`, `error`, retry e sessão expirada em cada consulta.
 8. Adicionar comparação de dados entre dois navegadores e testes de acesso direto à API.
 
-## Judge integrado: contrato futuro
+## Judge integrado
 
-O contrato `JudgeGateway` em `src/lib/judge.ts` prevê submissão e consulta de resultado. Não possui implementação falsa de Accepted.
+Implementado em [JUDGE-API.md](JUDGE-API.md). Situação dos passos do fluxo planejado:
 
-Fluxo recomendado:
-
-1. Cliente envia `problemId`, linguagem, código e chave de idempotência para gateway autenticado.
-2. Servidor verifica matrícula, questão publicada, tamanho, quotas e linguagem permitida.
-3. Cria submissão `queued`; guarda código com política de retenção definida.
-4. Worker lê testes privados, descobre/mapeia linguagens na instância Judge0 e executa com limites.
-5. Worker agrega resultados, persiste veredito e atualiza progresso verificado; callbacks/polling são validados no servidor.
-6. Cliente consulta apenas suas submissões; professor consulta as da própria turma. Não devolver testes ocultos completos.
+1. ✅ Cliente envia `problemId`, linguagem, código e chave de idempotência. Sem casos de teste, exceto questões que só existem na demo local.
+2. ⚠️ Servidor verifica sessão, matrícula ou dono, questão publicada (o dono roda rascunhos), tamanho e linguagem. **Faltam quotas e limite de frequência.**
+3. ❌ Submissão persistida: fatia 2 da [Entrega 4](ENTREGA-4.md).
+4. ✅ Casos privados em `private.problem_tests`, lidos só pela função com a chave de serviço; execução síncrona com limites de CPU e memória.
+5. ❌ Veredito persistido e progresso verificado: fatia 2.
+6. ✅ Nunca devolve saída de caso oculto; ❌ consulta de submissões pelo professor depende da fatia 2.
 
 Não rodar `exec`, `eval`, compiladores ou processos dos alunos no processo web. Não enviar credenciais Judge0 no bundle. Não aceitar veredito vindo do navegador. O visualizador não deve executar código do editor: ele reproduz frames determinísticos de algoritmos conhecidos.
 
 ## Hospedagem
 
-Demonstração: build estático em GitHub Pages. Futuro: manter frontend estático, Supabase para Auth/PostgreSQL e gateway/worker separado para execução. O Pages não hospeda APIs ou workers de judge. Valores de ambiente `VITE_*` são públicos durante o build; apenas URL e chave publicável podem entrar ali.
+Demonstração: build estático em GitHub Pages, sem judge: o botão de execução aparece desabilitado com explicação. Remoto: frontend estático, Supabase para Auth/PostgreSQL e a Edge Function `judge-submit` para execução. O Pages não hospeda APIs. Valores de ambiente `VITE_*` são públicos durante o build; apenas URL e chave publicável podem entrar ali.

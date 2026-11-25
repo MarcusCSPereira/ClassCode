@@ -57,9 +57,10 @@ test('professor cria turma e questão no padrão e aluno entra pelo código', as
     await page.getByLabel(label, { exact: true }).fill('Conteúdo de teste');
   for (const text of ['Dica 1:', 'Dica 2:', 'Dica 3:'])
     await page.getByLabel(text, { exact: false }).fill('Pense em somar os valores.');
-  await page.getByRole('button', { name: 'Publicar desafio na demonstração' }).click();
-  await expect(page.getByRole('button', { name: /Soma da turma B/ })).toBeVisible();
-  await page.getByRole('button', { name: /Soma da turma B/ }).click();
+  // New problems start as drafts; publishing goes through validation (CC-24).
+  await page.getByRole('button', { name: 'Salvar e validar' }).click();
+  await page.getByRole('button', { name: 'Publicar sem validar' }).click();
+  await page.getByRole('button', { name: 'Abrir Soma da turma B' }).click();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Soma da turma B', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Alterar perfil da demonstração' }).click();
@@ -329,4 +330,239 @@ test('turma fictícia demonstra o painel e se identifica como fictícia', async 
 
   await nav(page, 'Minhas turmas');
   await expect(page.getByText('dados fictícios')).toHaveCount(0);
+});
+
+test('executar código envia só o código e mostra o veredito ou um erro claro', async ({ page }) => {
+  const bodies: Record<string, unknown>[] = [];
+  let status = 200;
+  await page.route('**/api/judge/submit', async (route) => {
+    bodies.push(route.request().postDataJSON() as Record<string, unknown>);
+    if (status !== 200) return route.fulfill({ status, json: { error: 'not_found' } });
+    await route.fulfill({
+      json: {
+        id: 'e2e',
+        verdict: 'wrong_answer',
+        createdAt: '2026-11-24T00:00:00.000Z',
+        passedCases: 1,
+        totalCases: 4,
+        stdout: '20\n',
+      },
+    });
+  });
+  await page.goto('/#problem/sum');
+  await page.getByRole('button', { name: 'Executar código' }).click();
+  const result = page.getByRole('status', { name: 'Resultado do Judge0' });
+  await expect(result).toContainText('Resposta incorreta');
+  await expect(result).toContainText('Casos: 1/4');
+  expect(bodies[0]).toMatchObject({ problemId: 'sum', language: 'python' });
+  // Catalog cases stay on the server: the browser sends no inputs or expected outputs.
+  expect(Object.keys(bodies[0]).sort()).toEqual([
+    'idempotencyKey',
+    'language',
+    'problemId',
+    'sourceCode',
+  ]);
+
+  status = 404;
+  await page.getByRole('button', { name: 'Executar código' }).click();
+  await expect(page.getByRole('alert')).toContainText('judge-submit foi publicada');
+});
+
+test('professor cria rascunho com caso oculto, valida, publica, edita, arquiva e restaura', async ({
+  page,
+}) => {
+  const perspective = async (role: 'teacher' | 'student') => {
+    await page.getByRole('button', { name: 'Alterar perfil da demonstração' }).click();
+    await page.getByRole('combobox', { name: 'Perspectiva', exact: true }).selectOption(role);
+    await page.getByRole('button', { name: 'Acessar demonstração' }).click();
+  };
+  const studentSees = async (title: string, count: number) => {
+    await perspective('student');
+    await nav(page, /^Desafios/);
+    await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(count);
+    await perspective('teacher');
+  };
+  const judged: Record<string, unknown>[] = [];
+  await page.route('**/api/judge/submit', async (route) => {
+    judged.push(route.request().postDataJSON() as Record<string, unknown>);
+    await route.fulfill({
+      json: {
+        id: 'ref',
+        verdict: 'accepted',
+        createdAt: '2026-11-24T00:00:00.000Z',
+        passedCases: 2,
+        totalCases: 2,
+      },
+    });
+  });
+  await page.goto('/');
+  await perspective('teacher');
+  await page.getByRole('button', { name: 'Nova questão' }).click();
+  await page.getByLabel('Título', { exact: true }).fill('Dobro de n');
+  for (const label of ['Objetivo de aprendizagem', 'Enunciado', 'Entrada', 'Saída', 'Restrições'])
+    await page.getByLabel(label, { exact: true }).fill('Conteúdo de teste');
+  await page.getByLabel('Exemplo de entrada', { exact: true }).fill('2');
+  await page.getByLabel('Exemplo de saída', { exact: true }).fill('4');
+  for (const text of ['Dica 1:', 'Dica 2:', 'Dica 3:'])
+    await page.getByLabel(text, { exact: false }).fill('Multiplique por dois.');
+  await page.getByRole('button', { name: 'Adicionar caso oculto' }).click();
+  await page.getByLabel('Entrada do caso 2').fill('21');
+  await page.getByLabel('Saída esperada do caso 2').fill('42');
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+
+  const list = page.getByRole('list', { name: 'Suas questões' });
+  const draft = list.getByRole('listitem').filter({ hasText: 'Dobro de n' });
+  await expect(draft).toContainText('Rascunho');
+  await studentSees('Dobro de n', 0);
+
+  await draft.getByRole('button', { name: 'Validar e publicar Dobro de n' }).click();
+  const validation = page.getByRole('dialog', { name: 'Validar e publicar' });
+  const publish = validation.getByRole('button', { name: 'Publicar para a turma' });
+  await expect(publish).toBeDisabled();
+  await validation.getByLabel('Solução de referência').fill('print(2 * int(input()))');
+  await validation.getByRole('button', { name: 'Rodar nos casos de teste' }).click();
+  await expect(validation.getByRole('status', { name: 'Resultado da validação' })).toContainText(
+    'Casos: 2/2',
+  );
+  // A problem that exists only in this browser sends its cases to the local judge.
+  expect(judged[0]).toMatchObject({
+    language: 'python',
+    tests: [
+      { stdin: '2', expectedOutput: '4', isExample: true },
+      { stdin: '21', expectedOutput: '42' },
+    ],
+  });
+  await publish.click();
+  await expect(draft).toContainText('Publicada');
+
+  await draft.getByRole('button', { name: 'Editar Dobro de n' }).click();
+  const editor = page.getByRole('dialog', { name: 'Editar questão' });
+  await expect(editor.getByLabel('Saída esperada do caso 2')).toHaveValue('42');
+  await editor.getByLabel('Título', { exact: true }).fill('Dobro de um número');
+  await editor.getByRole('button', { name: 'Salvar alterações' }).click();
+  const published = list.getByRole('listitem').filter({ hasText: 'Dobro de um número' });
+  await expect(published).toContainText('Publicada');
+  await studentSees('Dobro de um número', 1);
+
+  await published.getByRole('button', { name: 'Arquivar Dobro de um número' }).click();
+  await page
+    .getByRole('dialog', { name: 'Arquivar questão?' })
+    .getByRole('button', { name: 'Arquivar', exact: true })
+    .click();
+  await expect(published).toContainText('Arquivada');
+  await studentSees('Dobro de um número', 0);
+  await published
+    .getByRole('button', { name: 'Restaurar Dobro de um número como rascunho' })
+    .click();
+  await expect(published).toContainText('Rascunho');
+});
+
+async function switchPerspective(page: Page, role: 'student' | 'teacher') {
+  await page.getByRole('button', { name: 'Alterar perfil da demonstração' }).click();
+  await page.getByRole('combobox', { name: 'Perspectiva', exact: true }).selectOption(role);
+  await page.getByRole('button', { name: 'Acessar demonstração' }).click();
+}
+async function saveReport(page: Page, evidence: string) {
+  await page.getByLabel('Link da submissão ou reflexão sobre a solução').fill(evidence);
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Salvar conclusão declarada' }).click();
+}
+
+test('professor revisa a conclusão, pede ajuste e o aluno vê o retorno', async ({ page }) => {
+  await page.goto('/#problem/sum');
+  await page.getByRole('button', { name: 'Registrar conclusão', exact: true }).click();
+  await saveReport(page, 'Somei os dois números.');
+
+  await switchPerspective(page, 'teacher');
+  const panel = page.getByRole('region', { name: 'Acompanhamento da turma' });
+  await panel.getByRole('button', { name: 'Ver detalhes de Alex' }).click();
+  const detail = page.getByRole('dialog', { name: 'Alex' });
+  await expect(detail.locator('.evidence-text')).toHaveText('Somei os dois números.');
+  await detail.getByRole('button', { name: 'Pedir ajuste em O primeiro de muitos' }).click();
+  await detail
+    .getByLabel('O que o aluno deve ajustar em O primeiro de muitos')
+    .fill('Teste também o caso 0 0.');
+  await detail.getByRole('button', { name: 'Enviar pedido de ajuste' }).click();
+  await expect(detail).toContainText('Ajuste pedido em');
+  await expect(detail).toContainText('Concluiu sem dica · ajuste pedido');
+  await detail.getByRole('button', { name: 'Fechar' }).click();
+  await expect(
+    panel.getByRole('region', { name: 'Mapa aluno × questão' }).getByRole('row', { name: /Alex/ }),
+  ).toContainText('ajuste pedido');
+
+  await switchPerspective(page, 'student');
+  await page.goto('/#problem/sum');
+  const feedback = page.getByRole('note', { name: 'Retorno do professor' });
+  await expect(feedback).toContainText('Seu professor pediu um ajuste.');
+  await expect(feedback).toContainText('Teste também o caso 0 0.');
+  // New evidence needs a new look from the teacher, so the request goes away.
+  await page.getByRole('button', { name: 'Conclusão declarada · ver registro' }).click();
+  await saveReport(page, 'Somei os dois números e testei 0 0.');
+  await expect(feedback).toHaveCount(0);
+
+  await switchPerspective(page, 'teacher');
+  await panel.getByRole('button', { name: 'Ver detalhes de Alex' }).click();
+  await expect(detail.locator('.evidence-text')).toHaveText('Somei os dois números e testei 0 0.');
+  await expect(detail).not.toContainText('Ajuste pedido em');
+  await detail.getByRole('button', { name: 'Marcar O primeiro de muitos como revisada' }).click();
+  await expect(detail).toContainText('Revisada em');
+  await expect(
+    detail.getByRole('button', { name: 'Marcar O primeiro de muitos como revisada' }),
+  ).toHaveCount(0);
+  await detail.getByRole('button', { name: 'Fechar' }).click();
+
+  await switchPerspective(page, 'student');
+  await page.goto('/#problem/sum');
+  await expect(feedback).toContainText('Seu professor revisou esta conclusão.');
+});
+
+test('turma fictícia mostra revisões de exemplo sem permitir revisar', async ({ page }) => {
+  await page.goto('/');
+  await switchPerspective(page, 'teacher');
+  const panel = page.getByRole('region', { name: 'Acompanhamento da turma' });
+  await panel
+    .getByLabel('Turma acompanhada')
+    .selectOption({ label: 'Turma de demonstração · dados fictícios' });
+  await panel.getByRole('button', { name: 'Ver detalhes de Elisa T.' }).click();
+  const detail = page.getByRole('dialog', { name: 'Elisa T.' });
+  await expect(detail.getByRole('note')).toContainText('a revisão fica desativada');
+  await expect(detail).toContainText('Ajuste pedido em');
+  await expect(detail.getByRole('button', { name: /Marcar .* como revisada/ })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
+test('professor gera novo código e o anterior deixa de funcionar', async ({ page }) => {
+  await page.goto('/');
+  await switchPerspective(page, 'teacher');
+  await page.getByRole('button', { name: 'Criar uma turma', exact: false }).click();
+  await page.getByLabel('Nome da turma').fill('Turma rotativa');
+  await page.getByRole('button', { name: 'Criar turma', exact: true }).last().click();
+  const card = page.locator('.classroom-card').filter({ hasText: 'Turma rotativa' });
+  const oldCode = await card.locator('.class-code strong').innerText();
+  await expect(
+    page
+      .locator('.classroom-card')
+      .filter({ hasText: 'dados fictícios' })
+      .getByRole('button', { name: /Gerar novo código/ }),
+  ).toHaveCount(0);
+  await card.getByRole('button', { name: 'Gerar novo código para Turma rotativa' }).click();
+  await page.getByRole('button', { name: 'Gerar novo código', exact: true }).click();
+  await expect(card.locator('.class-code strong')).not.toHaveText(oldCode);
+  const newCode = await card.locator('.class-code strong').innerText();
+  await expect(page.getByText(`Novo código de Turma rotativa: ${newCode}`)).toBeAttached();
+
+  await switchPerspective(page, 'student');
+  await nav(page, 'Minhas turmas');
+  await page.getByRole('button', { name: 'Entrar em uma turma', exact: true }).click();
+  const input = page.getByLabel('Código da turma', { exact: true });
+  await input.fill(oldCode);
+  await page.getByRole('button', { name: 'Entrar na turma', exact: true }).click();
+  expect(await input.evaluate((el: HTMLInputElement) => el.validationMessage)).toMatch(
+    /^Código não encontrado/,
+  );
+  await input.fill(newCode);
+  await page.getByRole('button', { name: 'Entrar na turma', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Turma rotativa' })).toBeVisible();
 });

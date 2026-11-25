@@ -2,7 +2,12 @@
  * Teacher metrics v1 (docs/ENTREGA-2.md, section 6). They support pedagogical follow-up and are
  * never a grade: completions are self-reported. Pure functions over ClassroomActivity.
  */
-import type { ActivityRow, ClassroomActivity, ProblemSummary } from '../data/repository';
+import type {
+  ActivityRow,
+  ClassroomActivity,
+  ProblemSummary,
+  ReviewStatus,
+} from '../data/repository';
 import { currentModule, hintsBeforeCompletion, moduleStatuses } from './progression';
 import type { HintOrdinal, Module } from './types';
 
@@ -29,6 +34,9 @@ export interface StudentMetrics {
   joinedAt: string;
   opened: number;
   completed: number;
+  /** Completions the teacher reviewed / sent back with a change request. */
+  reviewed: number;
+  changesRequested: number;
   completionRate: number | null;
   hintsPerCompletion: number | null;
   /** Share of completions without any hint; shown as "Autonomia". */
@@ -51,7 +59,7 @@ export interface ProblemMetrics {
 export type MapCell =
   | { status: 'not_opened' }
   | { status: 'in_progress'; hints: number }
-  | { status: 'completed'; hints: number };
+  | { status: 'completed'; hints: number; review?: ReviewStatus };
 export interface ClassroomMetrics {
   enrolled: number;
   activeLastWeek: number;
@@ -157,6 +165,8 @@ export function classroomMetrics(
         joinedAt: entry.joinedAt,
         opened: own.length,
         completed: done.length,
+        reviewed: done.filter((r) => r.review?.status === 'reviewed').length,
+        changesRequested: done.filter((r) => r.review?.status === 'changes_requested').length,
         completionRate: ratio(done.length, own.length),
         hintsPerCompletion: mean(hints),
         noHintRate: ratio(hints.filter((h) => h === 0).length, done.length),
@@ -197,7 +207,14 @@ export function classroomMetrics(
         const row = own.get(p.id);
         if (!row) return [p.id, { status: 'not_opened' }];
         if (row.reportedAt)
-          return [p.id, { status: 'completed', hints: hintsBeforeCompletion(row) }];
+          return [
+            p.id,
+            {
+              status: 'completed',
+              hints: hintsBeforeCompletion(row),
+              ...(row.review && { review: row.review.status }),
+            },
+          ];
         return [p.id, { status: 'in_progress', hints: row.hintViews.length }];
       }),
     );
@@ -225,7 +242,10 @@ export function describeCell(cell: MapCell): string {
   if (cell.status === 'not_opened') return 'Não abriu';
   if (cell.status === 'in_progress')
     return cell.hints ? `Viu ${hints(cell.hints)}` : 'Em andamento';
-  return cell.hints ? `Concluiu com ${hints(cell.hints)}` : 'Concluiu sem dica';
+  const done = cell.hints ? `Concluiu com ${hints(cell.hints)}` : 'Concluiu sem dica';
+  if (cell.review === 'reviewed') return `${done} · revisada`;
+  if (cell.review === 'changes_requested') return `${done} · ajuste pedido`;
+  return done;
 }
 
 const CSV_COLUMNS = [
@@ -233,6 +253,8 @@ const CSV_COLUMNS = [
   'Matriculado em',
   'Desafios abertos',
   'Conclusões autodeclaradas',
+  'Conclusões revisadas pelo professor',
+  'Ajustes pedidos',
   'Taxa de conclusão (%)',
   'Dicas por conclusão',
   'Autonomia: conclusões sem dica (%)',
@@ -266,6 +288,8 @@ export function studentsCsv(
     date.format(new Date(s.joinedAt)),
     s.opened,
     s.completed,
+    s.reviewed,
+    s.changesRequested,
     percent(s.completionRate),
     s.hintsPerCompletion === null ? '' : decimal(s.hintsPerCompletion),
     percent(s.noHintRate),

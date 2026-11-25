@@ -1,4 +1,4 @@
-import { Braces, ChevronRight, CircleHelp, GraduationCap, Plus } from 'lucide-react';
+import { Braces, ChevronRight, CircleHelp, GraduationCap, Plus, RefreshCw } from 'lucide-react';
 import { belongsToClassroom } from '../lib/domain';
 import type { Classroom } from '../lib/types';
 import type { ProblemSummary } from '../data/repository';
@@ -9,6 +9,7 @@ export default function ClassesPage({
   onPrimaryAction,
   onOpenProblem,
   onAnnounce,
+  onRotateInvite,
   remote = false,
 }: {
   teacher: boolean;
@@ -17,6 +18,8 @@ export default function ClassesPage({
   onPrimaryAction: () => void;
   onOpenProblem: (p: ProblemSummary) => void;
   onAnnounce: (message: string) => void;
+  /** Shown on classes whose invite code the teacher can see, that is, their own. */
+  onRotateInvite?: (c: Classroom) => void;
   remote?: boolean;
 }) {
   return (
@@ -67,6 +70,15 @@ export default function ClassesPage({
                   <Braces size={19} />
                 </button>
               </div>
+            )}
+            {teacher && c.code && !c.fictitious && onRotateInvite && (
+              <button
+                className="text-button rotate-invite"
+                aria-label={`Gerar novo código para ${c.name}`}
+                onClick={() => onRotateInvite(c)}
+              >
+                <RefreshCw size={14} /> Gerar novo código
+              </button>
             )}
             <div className="class-challenges">
               <strong>Desafios da turma</strong>

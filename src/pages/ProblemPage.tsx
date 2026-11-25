@@ -15,10 +15,10 @@ import {
 } from 'lucide-react';
 import { modules, starters } from '../lib/catalog';
 import { remainingHintSeconds } from '../lib/domain';
-import { judgeGateway, verdictLabel, type JudgeGateway, type SubmissionResult } from '../lib/judge';
+import { verdictLabel, type JudgeGateway, type SubmissionResult } from '../lib/judge';
 import type { HintOrdinal, Language } from '../lib/types';
 import type { Theme } from '../lib/useTheme';
-import type { ProblemSummary } from '../data/repository';
+import type { ProblemSummary, ProgressReview } from '../data/repository';
 const CodeEditor = lazy(() => import('../components/CodeEditor'));
 export type ProblemTab = 'statement' | 'hints';
 const fmt = (seconds: number) =>
@@ -35,12 +35,13 @@ export default function ProblemPage({
   theme,
   storageError,
   tab,
-  gateway = judgeGateway,
+  judge,
   onTabChange,
   onLanguageChange,
   onDraftChange,
   onRevealHint,
   onReport,
+  review,
   onBack,
   onOpenLab,
 }: {
@@ -53,13 +54,16 @@ export default function ProblemPage({
   theme: Theme;
   storageError: boolean;
   tab: ProblemTab;
-  gateway?: JudgeGateway;
+  /** Null when this build has no judge (static hosting); execution is then unavailable. */
+  judge: JudgeGateway | null;
   onTabChange: (tab: ProblemTab) => void;
   onLanguageChange: (language: Language) => void;
   onDraftChange: (value: string) => void;
   /** Records the view on first call and resolves to the text; safe to repeat. */
   onRevealHint: (ordinal: HintOrdinal) => Promise<string>;
   onReport: () => void;
+  /** The teacher's review of this completion, shown to the student. */
+  review?: ProgressReview;
   onBack: () => void;
   onOpenLab: () => void;
 }) {
@@ -86,16 +90,14 @@ export default function ProblemPage({
   useEffect(() => viewedHints.forEach(loadHint), [viewedHints.join()]);
 
   async function runJudge() {
+    if (!judge) return;
     setSubmitting(true);
     setSubmissionError(null);
     try {
-      const result = await gateway.submit({
+      const result = await judge.submit({
         problemId: problem.id,
-        problemTitle: problem.title,
         language,
         sourceCode: draft ?? starters[language],
-        stdin: problem.exampleInput,
-        expectedOutput: problem.exampleOutput,
         idempotencyKey: crypto.randomUUID(),
       });
       setSubmissionResult(result);
@@ -254,12 +256,34 @@ export default function ProblemPage({
             <div className="submission-info">
               <CircleHelp size={18} />
               <p>
-                Execute sua solução nos casos de teste via Judge0 ou{' '}
+                {judge
+                  ? 'Execute sua solução nos casos de teste via Judge0 ou '
+                  : 'A execução de código não está disponível nesta publicação. '}
                 {problem.externalUrl
-                  ? 'envie no judge de origem e registre seu progresso aqui.'
-                  : 'valide com seu professor e registre seu progresso.'}
+                  ? 'Envie no judge de origem e registre seu progresso aqui.'
+                  : 'Valide com seu professor e registre seu progresso.'}
               </p>
             </div>
+            {solved && review && (
+              <div
+                className={`teacher-feedback ${review.status === 'changes_requested' ? 'needs-change' : ''}`}
+                role="note"
+                aria-label="Retorno do professor"
+              >
+                <strong>
+                  {review.status === 'reviewed'
+                    ? 'Seu professor revisou esta conclusão.'
+                    : 'Seu professor pediu um ajuste.'}
+                </strong>
+                {review.comment && <p>{review.comment}</p>}
+                {review.status === 'changes_requested' && (
+                  <p className="helper">
+                    Ajuste sua solução e atualize a evidência em “Conclusão declarada · ver
+                    registro”.
+                  </p>
+                )}
+              </div>
+            )}
             {submissionError && (
               <div className="judge-result judge-error" role="alert">
                 <strong>Erro na execução:</strong> {submissionError}
@@ -297,7 +321,8 @@ export default function ProblemPage({
               <button
                 type="button"
                 className="button primary full"
-                disabled={submitting}
+                disabled={submitting || !judge}
+                title={judge ? undefined : 'Execução indisponível nesta publicação'}
                 onClick={() => void runJudge()}
               >
                 <Play size={16} />

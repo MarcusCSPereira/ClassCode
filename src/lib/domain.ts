@@ -1,4 +1,4 @@
-import type { DemoState, Hint, Problem } from './types';
+import type { DemoState, Hint, Problem, ProblemStatus } from './types';
 /** Key kept from the first release; the stored `version` field drives migration. */
 export const STORAGE_KEY = 'classcode.demo.v1';
 export function initialState(now = Date.now()): DemoState {
@@ -70,15 +70,26 @@ export function validateProblem(p: Omit<Problem, 'id' | 'source'>): string | nul
     return 'Escreva as três dicas progressivas.';
   if (p.externalUrl && !safeExternalUrl(p.externalUrl))
     return 'Use um link HTTPS de CSES, Codeforces, AtCoder, LeetCode ou beecrowd.';
+  const tests = p.tests ?? [];
+  if (tests.length > MAX_HIDDEN_TESTS)
+    return `Use no máximo ${MAX_HIDDEN_TESTS} casos ocultos além do exemplo.`;
+  if (tests.some((t) => !t.expectedOutput.trim()))
+    return 'Todo caso oculto precisa de uma saída esperada.';
   return null;
 }
+/** Hidden cases a teacher may add; with the example, the judge runs at most 20. */
+export const MAX_HIDDEN_TESTS = 19;
+/** Catalog problems have no status and count as published. */
+export const isPublished = (p: { status?: ProblemStatus }) =>
+  (p.status ?? 'published') === 'published';
+/** Teachers see every local problem, drafts included; students only published ones of their classes. */
 export function visibleProblems(catalog: Problem[], state: DemoState): Problem[] {
   return [
     ...catalog,
     ...state.customProblems.filter(
       (p) =>
         state.role === 'teacher' ||
-        (p.authorClassId && state.joinedClassIds.includes(p.authorClassId)),
+        (isPublished(p) && p.authorClassId && state.joinedClassIds.includes(p.authorClassId)),
     ),
   ];
 }

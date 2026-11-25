@@ -2,6 +2,8 @@
 
 Data de partida: **02/11/2026**. Meta de planejamento: **15/11/2026**, adotada como referência para “meio de novembro”, sem depender de um número de integrantes.
 
+> **Atualização em 24/11/2026:** a meta de 15/11 passou e o novo prazo ainda não foi definido (decisão E3 da [Entrega 4](ENTREGA-4.md#6-decisões-pendentes-do-time)). A Entrega 4 fecha o fluxo do professor de ponta a ponta; itens CC-22 a CC-25 abaixo.
+
 ## Resultado esperado para a apresentação
 
 Um professor autenticado cria uma turma e uma questão. Um aluno em outro navegador entra pelo código, acessa a questão, recebe dicas no tempo correto, resolve no judge externo e registra evidência. A trilha recomenda automaticamente o próximo passo conforme o aluno conclui módulos e usa dicas. O professor vê métricas de uso da própria turma. Uma visualização permite explicar o algoritmo durante a apresentação.
@@ -45,7 +47,7 @@ Até 09/11, se autenticação, matrícula e publicação ainda não estiverem in
 | CC-02 | P0         | Login/logout, cadastro, recuperação e sessão conectados no modo remoto; papel de professor só por operador. **Falta homologação no Supabase real**                          | CC-01         |
 | CC-03 | P0         | Adaptador completo, estado remoto e seleção explícita demo/remoto implementados. **Falta homologação no Supabase real**                                                     | CC-02         |
 | CC-04 | P0         | Criar/listar turma e entrar por convite implementados; repetição/inválido tratados. **Falta validar entre dois navegadores reais**                                          | CC-03         |
-| CC-05 | P0         | Criar rascunho de questão, configurar três dicas via RPC, publicar depois de validar; editar e arquivar com confirmação                                                     | CC-04         |
+| CC-05 | P0         | Criar rascunho de questão, configurar três dicas via RPC, publicar depois de validar; editar e arquivar com confirmação. **Concluído em 24/11 pelo CC-24**                  | CC-04         |
 | CC-06 | P0         | Tentativa idempotente e dicas por RPC ligadas ao modo remoto; payload de listagem não contém textos das dicas. **Falta homologação real**                                   | CC-05         |
 | CC-07 | P0         | Evidência autodeclarada e reabertura ligadas ao modo remoto, sem fingir Accepted. **Falta homologação real**                                                                | CC-06         |
 | CC-08 | P0         | Relatório da turma com nomes, tentativas, conclusões declaradas e ajuda utilizada; RLS para leitura do proprietário; exportação CSV. **Desdobrado em CC-17, CC-18 e CC-19** | CC-07         |
@@ -68,6 +70,15 @@ Itens adicionados na Entrega 2. Regras, contratos e critérios completos em [ENT
 | CC-19 | P0         | Painel de métricas do professor com mapa aluno × questão e CSV. **Concluído em 02/11 no modo demo**                               | CC-00, CC-17, CC-18 |
 | CC-20 | P0         | **Concluído localmente:** sete modelos privados e importação idempotente ao criar turma remota; falta homologação real            | CC-05               |
 | CC-21 | P1         | Turma fictícia no modo demo para demonstrar o painel, identificada como tal. **Concluído em 02/11**                               | CC-19               |
+
+Itens adicionados na Entrega 4. Diagnóstico, fluxo e critérios em [ENTREGA-4.md](ENTREGA-4.md#5-fatias).
+
+| ID    | Prioridade | Entrega e critério de aceite                                                                                                                                      | Dependências |
+| ----- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| CC-22 | P0         | Judge confiável: endereço configurável, botão desabilitado sem judge, casos de teste no servidor com acesso conferido, checagem do bundle. **Concluído em 24/11** | CC-13        |
+| CC-23 | P1         | Submissões salvas, limite de frequência e "Aceito" como conclusão verificada no painel                                                                            | CC-22, CC-01 |
+| CC-24 | P0         | Ciclo da questão: rascunho, casos ocultos, validação com solução de referência, publicar, editar e arquivar. **Concluído em 24/11**                               | CC-22        |
+| CC-25 | P0         | Revisão do aluno com comentário, troca do código de convite e script de promoção de professor. **Concluído em 24/11**                                             | CC-19        |
 
 P0 é o MVP; P1 melhora a experiência quando o fluxo estiver estável; P2 não bloqueia a apresentação. Cada integrante assume uma entrega ou grupo coerente conforme disponibilidade, sem pressupor uma equipe específica.
 

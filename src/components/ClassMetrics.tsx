@@ -18,7 +18,13 @@ import {
   type SignalKind,
 } from '../lib/metrics';
 import type { Classroom } from '../lib/types';
-import { describeError, type ClassroomActivity, type ProblemSummary } from '../data/repository';
+import {
+  describeError,
+  type ClassroomActivity,
+  type ProblemSummary,
+  type ReviewStatus,
+} from '../data/repository';
+import StudentDetailModal from '../modals/StudentDetailModal';
 
 type Load =
   | { status: 'loading' }
@@ -54,14 +60,23 @@ export default function ClassMetrics({
   classes,
   problems,
   loadActivity,
+  onReview,
 }: {
   classes: Classroom[];
   /** Every problem the teacher sees; filtered here to the selected class. */
   problems: ProblemSummary[];
   /** Changes identity when the underlying activity changes, which triggers a reload. */
   loadActivity: (classroomId: string) => Promise<ClassroomActivity>;
+  /** Reviews a student's completion; the panel reloads afterwards. */
+  onReview: (
+    problemId: string,
+    studentId: string,
+    status: ReviewStatus | 'clear',
+    comment?: string,
+  ) => Promise<void>;
 }) {
   const [selectedId, setSelectedId] = useState(classes[0]?.id ?? '');
+  const [detailId, setDetailId] = useState<string | null>(null);
   const classroom = classes.find((c) => c.id === selectedId) ?? classes[0];
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [retry, setRetry] = useState(0);
@@ -91,6 +106,7 @@ export default function ClassMetrics({
         : null,
     [current, classProblems],
   );
+  const detailStudent = report?.students.find((s) => s.studentId === detailId);
   const title = (problemId: string) => classProblems.find((p) => p.id === problemId)?.title;
 
   return (
@@ -107,7 +123,13 @@ export default function ClassMetrics({
           <div className="metrics-toolbar">
             <label>
               Turma acompanhada
-              <select value={classroom.id} onChange={(e) => setSelectedId(e.target.value)}>
+              <select
+                value={classroom.id}
+                onChange={(e) => {
+                  setSelectedId(e.target.value);
+                  setDetailId(null);
+                }}
+              >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -220,7 +242,16 @@ export default function ClassMetrics({
                 <tbody>
                   {report.students.map((s) => (
                     <tr key={s.studentId}>
-                      <th scope="row">{s.displayName}</th>
+                      <th scope="row">
+                        <button
+                          type="button"
+                          className="link-button"
+                          aria-label={`Ver detalhes de ${s.displayName}`}
+                          onClick={() => setDetailId(s.studentId)}
+                        >
+                          {s.displayName}
+                        </button>
+                      </th>
                       <td className="num">{s.opened}</td>
                       <td className="num">{s.completed}</td>
                       <td className="num">{decimal(s.hintsPerCompletion)}</td>
@@ -328,6 +359,20 @@ export default function ClassMetrics({
             </div>
           </section>
         </>
+      )}
+      {report && current?.status === 'ready' && detailStudent && (
+        <StudentDetailModal
+          student={detailStudent}
+          problems={classProblems}
+          rows={current.data.activity.filter((r) => r.studentId === detailStudent.studentId)}
+          cells={report.map[detailStudent.studentId] ?? {}}
+          readOnly={Boolean(classroom?.fictitious)}
+          onReview={async (problemId, status, comment) => {
+            await onReview(problemId, detailStudent.studentId, status, comment);
+            setRetry((n) => n + 1);
+          }}
+          onClose={() => setDetailId(null)}
+        />
       )}
     </section>
   );

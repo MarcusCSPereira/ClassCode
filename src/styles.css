@@ -1546,6 +1546,10 @@ main {
 .class-code .icon-button {
   color: #63708a;
 }
+.rotate-invite {
+  margin-top: 10px;
+  font-size: 12px;
+}
 .class-challenges {
   margin-top: 24px;
 }
@@ -1803,6 +1807,175 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .metrics-layout {
+    grid-template-columns: 1fr;
+  }
+}
+/* Teacher problem lifecycle (Entrega 4, CC-24): theme tokens only. */
+.teacher-problems {
+  display: grid;
+  margin: 0 0 34px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+.teacher-problem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.teacher-problem:last-child {
+  border-bottom: none;
+}
+.teacher-problem-info strong {
+  display: block;
+  font-size: 13px;
+}
+.teacher-problem-info small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.teacher-problem-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 14px;
+}
+.teacher-problem-actions .text-button {
+  font-size: 12px;
+}
+.test-cases {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.test-cases legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.test-cases > .button {
+  align-self: flex-start;
+}
+.test-case {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.warning-note {
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+  color: var(--text);
+}
+.form-stack textarea.mono {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+/* Teacher review of a student's completion (Entrega 4, CC-25). */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.review-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+}
+.review-item-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  font-size: 13px;
+}
+.review-item-heading .muted-cell {
+  font-size: 11px;
+}
+.review-item > .helper {
+  margin: 0;
+  font-size: 12px;
+}
+.evidence-text {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--border);
+  background: var(--surface-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.review-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--accent-text);
+}
+.review-state svg {
+  flex: none;
+  margin-top: 2px;
+}
+.teacher-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.teacher-feedback.needs-change {
+  border-left-color: #c58a2b;
+}
+@media (max-width: 760px) {
+  .teacher-problem {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .teacher-problem .badge {
+    justify-self: start;
+  }
+  .teacher-problem-actions {
+    justify-content: flex-start;
+  }
+  .test-case {
     grid-template-columns: 1fr;
   }
 }
@@ -3820,6 +3993,12 @@ main {
 :root[data-theme='dark'] .form-stack textarea,
 :root[data-theme='dark'] .form-stack select {
   color: var(--text);
+}
+/* Fields kept the light theme's white background, leaving light text on white. */
+:root[data-theme='dark'] .form-stack input:not([type='checkbox']):not([type='radio']),
+:root[data-theme='dark'] .form-stack textarea,
+:root[data-theme='dark'] .form-stack select {
+  background: var(--surface-muted);
 }
 :root[data-theme='dark'] .sidebar-note,
 :root[data-theme='dark'] .button.secondary,

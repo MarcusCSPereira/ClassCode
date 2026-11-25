@@ -39,6 +39,179 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
+### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 4 / CC-25
+
+**Itens do backlog:** CC-25 (concluído). Com ele, as fatias 1, 3 e 4 da Entrega 4 estão prontas nesta branch; a fatia 2 (CC-23) depende do Supabase real.
+
+**Feito**
+
+- **Banco** (commit `06e1c2a`), migration `202611240003_teacher_review.sql`:
+  - tabela `progress_reviews` ligada à conclusão: reabrir apaga a revisão, e mudar a evidência a zera (trigger);
+  - RPC `review_progress(pid, sid, review_status, review_comment)`, só para o dono: `reviewed`, `changes_requested` (exige comentário) ou `clear`;
+  - RPC `rotate_invite(cid)`, só para o dono: o código antigo para de valer e as matrículas continuam;
+  - `my_activity` e `classroom_activity` devolvem `review`.
+- **Script de operador** `supabase/scripts/promote-teacher.sql`: promove ou revoga professor por e-mail.
+- **Contrato:** `ActivityRow.review`, `reviewProgress`, `rotateInvite` e os erros `report_required` / `invalid_review`, nos dois repositórios. A atividade da demo inclui a evidência.
+- **Métricas:** `reviewed` / `changesRequested` por aluno, revisão no mapa ("· revisada", "· ajuste pedido") e duas colunas novas no CSV.
+- **Painel do professor:**
+  - o nome do aluno na tabela do acompanhamento ("Ver detalhes de …") abre `StudentDetailModal`, com cada questão aberta, a evidência, a revisão e as ações "Marcar como revisada", "Pedir ajuste" (comentário obrigatório) e "Desfazer revisão";
+  - depois de cada ação, o painel recarrega;
+  - na turma fictícia, o detalhe é somente leitura.
+- **Tela do desafio:** o aluno vê o "Retorno do professor" na área de envio: revisada, ou ajuste pedido com o comentário e a orientação para atualizar a evidência.
+- **Turmas:** "Gerar novo código" nas turmas do professor, com confirmação. A ação não aparece na turma fictícia.
+- **Turma fictícia:** toda conclusão tem evidência, e há um exemplo de cada revisão (Aline M.: revisada; Elisa T.: ajuste pedido com comentário).
+- **Correção do tema escuro** (o problema existia antes desta fatia): os campos de formulário tinham fundo branco com texto claro e ficavam ilegíveis. Agora usam `--surface-muted`.
+- **Docs:** ENTREGA-4 (fatia concluída e decisões), PLANO (CC-25 concluído), VALIDACAO, ARQUITETURA (RPCs, revisão e provisionamento pelo script), DESIGN e README.
+
+**Estado verificado**
+
+- `npm run check`: 99 testes de unidade, build e checagem do bundle passaram.
+- `npm run test:e2e`: 32 de 32, com três cenários novos em desktop e celular:
+  - ida e volta da revisão: pedir ajuste → o aluno vê → atualiza a evidência → o pedido some → o professor marca revisada → o aluno vê;
+  - detalhe somente leitura na turma fictícia;
+  - troca do convite: o código antigo é recusado e o novo entra.
+- `bash tests/test-db.sh` (PostgreSQL 18.1): passou.
+- Revisão visual do detalhe do aluno (desktop e celular escuros, celular claro, sem rolagem horizontal) e do retorno na tela do desafio.
+- Não verificado: Supabase real (migrations `202611240001` a `0003`, script de promoção, Edge Function) e Judge0 real.
+
+**Decisões tomadas**
+
+Registradas em [ENTREGA-4.md](ENTREGA-4.md#decisões-tomadas-na-implementação). As principais:
+
+- a revisão é acompanhamento, não nota, e não muda a conclusão autodeclarada;
+- "ajuste pedido" exige comentário;
+- evidência nova zera a revisão;
+- trocar o convite não desmatricula ninguém;
+- promover professor é só por script de operador.
+
+**Ficou de fora / limites conhecidos**
+
+- O aluno não recebe notificação: ele vê o retorno ao abrir o desafio. Não há lista de "retornos pendentes".
+- A revisão não guarda histórico: só vale a última.
+- O detalhe do aluno mostra só as questões publicadas da turma acompanhada.
+
+**Próximo passo esperado**
+
+1. **Revisar e integrar** a branch `feat/entrega-4-professor` (fatias 1, 3 e 4) em `main` por PR. O push e o PR ficam com o time.
+2. **Com o projeto Supabase (decisão E1):**
+   - aplicar as migrations `202611240001`, `202611240002` e `202611240003` e o seed;
+   - publicar a Edge Function `judge-submit` com os segredos do Judge0 (nunca em `VITE_*`);
+   - promover um professor com `supabase/scripts/promote-teacher.sql`;
+   - repetir no modo remoto o fluxo completo: criar turma, importar a trilha, ciclo da questão, aluno entra e conclui, revisão com pedido de ajuste e troca do convite.
+3. **Fatia 2 (CC-23)**, depois do item 2: submissões salvas, limite de frequência e "Aceito" como conclusão verificada no painel e no CSV.
+
+**Bloqueios**
+
+- E1 (projeto Supabase), E2 (qual Judge0) e E3 (novo prazo) seguem com o time.
+
+### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 3 / CC-24
+
+**Itens do backlog:** CC-24 (concluído); CC-05 fica atendido por ele
+
+**Feito**
+
+- **Banco:** a migration `202611240002_problem_lifecycle.sql` acrescenta `archived_at` e `updated_at` às questões e cria:
+  - `save_problem`: cria rascunho ou edita questão própria, com 3 dicas e até 19 casos ocultos; o exemplo é sempre o caso 1;
+  - `get_problem_for_edit`: só o dono; devolve dicas, casos, estado e quantos alunos abriram;
+  - `set_problem_status`: rascunho, publicada ou arquivada.
+  - `list_problems` passou a mostrar ao dono os rascunhos e as arquivadas, com o campo `status`.
+- **Repositório:** os mesmos três métodos no `DemoRepository` e no `SupabaseRepository`. Os tipos ganharam `ProblemStatus`, `ProblemTest`, `ProblemInput` e `EditableProblem`, e as listagens nunca levam casos ocultos.
+- **Painel do professor:** "Seus desafios publicados" virou **"Suas questões"** (`TeacherProblemList`), com o estado e as ações de cada um:
+  - rascunho: editar e validar e publicar;
+  - publicada: abrir, editar e arquivar;
+  - arquivada: restaurar como rascunho.
+- **Editor (`ProblemEditor`):** preenchido na edição, com a seção "Casos de teste ocultos", os botões "Salvar rascunho" / "Salvar e validar" e um aviso quando alunos já abriram a questão.
+- **Janelas novas:**
+  - `PublishProblemModal` roda a solução de referência no judge e só habilita "Publicar para a turma" com "Aceito"; "Publicar sem validar" é explícito;
+  - `ConfirmModal` confirma o arquivamento.
+- **Aluno, trilha e métricas** usam só questões publicadas. No modo demo, as questões locais enviam ao judge local o exemplo e os casos ocultos.
+- `.gitattributes` mantém os `.sh` em LF.
+- ARQUITETURA, PADRAO-QUESTAO, DESIGN, README, ENTREGA-4, PLANO e VALIDACAO atualizados.
+
+**Estado verificado**
+
+- `npm run check`: 93 testes de unidade, build e checagem do bundle passaram.
+- `npm run test:e2e`: 26 de 26, incluindo o ciclo completo do professor.
+- `bash tests/test-db.sh` (PostgreSQL 18.1): passou, com negações para aluno e outro professor.
+- Revisão visual em desktop claro e celular escuro.
+- Não verificado: Supabase real e Judge0 real.
+
+**Decisões tomadas**
+
+Registradas em [ENTREGA-4.md](ENTREGA-4.md#decisões-tomadas-na-implementação). As principais:
+
+- validar é recomendado, mas não obrigatório;
+- questão publicada pode ser editada, com aviso, sem versionamento;
+- arquivar tira a questão dos alunos e do acompanhamento;
+- o catálogo da demo não é editável.
+
+**Ficou de fora / limites conhecidos**
+
+- O E2E antigo "professor cria turma e questão" mudou de propósito: publicar agora passa pelo rascunho.
+- Sem versionamento de questões publicadas.
+- A validação usa o judge configurado; no site estático só resta "Publicar sem validar".
+
+**Próximo passo esperado**
+
+1. Fatia 4 (CC-25) nesta branch: detalhe do aluno com evidência, revisão com comentário visível ao aluno, troca do código de convite e script de promoção de professor.
+2. Com o projeto Supabase: aplicar as migrations `202611240001` e `202611240002` e o seed, e repetir o ciclo do professor no modo remoto.
+
+**Bloqueios**
+
+- E1 (projeto Supabase) para homologar no remoto.
+
+### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 1 / CC-22
+
+**Itens do backlog:** análise da Entrega 4 ([ENTREGA-4.md](ENTREGA-4.md)) e CC-22 (concluído)
+
+**Feito**
+
+- **Análise da `main` (`db61880`):** o "Executar código" só funcionava no `npm run dev`. No site publicado dava "HTTP 405" (404 em outras hospedagens), porque `/api/judge/submit` só existe no servidor do Vite. Diagnóstico, fluxo do professor e fatias em [ENTREGA-4.md](ENTREGA-4.md).
+- **Judge dividido entre navegador e servidor:**
+  - `src/lib/judge.ts` (navegador) escolhe o endereço, envia só o código e traduz erros (404/405 → "confira se a função judge-submit foi publicada").
+  - `supabase/functions/_shared/judge0.ts` executa no Judge0 e nunca devolve a saída de caso oculto.
+  - `supabase/functions/_shared/judgeHandler.ts` valida o corpo e responde 400/401/403/422/502.
+  - Os dois arquivos de `_shared` servem tanto o servidor local quanto a função.
+- **Endereço:** `VITE_JUDGE_URL`. Vazio = servidor local no `npm run dev`, função `judge-submit` no modo remoto e **nenhum judge no build estático** (botão desabilitado com explicação); `off` desliga.
+- **Casos de teste no servidor:**
+  - a migration `202611240001_judge_tests.sql` cria `private.problem_tests` e os casos dos modelos da trilha, copiados ao importar a trilha;
+  - a RPC `judge_cases(pid, requester)` só pode ser chamada com a chave de serviço e aceita o dono da turma (inclusive rascunho) ou um aluno matriculado em questão publicada;
+  - o seed traz os 31 casos e preenche turmas importadas antes;
+  - a ligação deixou de depender do título da questão.
+- **Edge Function:** identifica o aluno pela sessão (`/auth/v1/user`) e busca os casos pela RPC; só importa arquivos de `supabase/functions/`.
+- **Servidor local:** casos do catálogo em `src/server/demoJudgeCases.ts` (a interface não importa). Questões criadas na demo local mandam os próprios casos na requisição.
+- `scripts/check-bundle.mjs` entrou no `npm run check`: falha se um caso oculto aparecer no bundle.
+- `tests/test-db.sh` roda no Windows (Git Bash) usando `127.0.0.1:54329`.
+- README, ARQUITETURA, JUDGE-API, PLANO (CC-22 a CC-25 e aviso de prazo vencido), VALIDACAO e `.env.example` atualizados.
+
+**Estado verificado**
+
+- `npm run check`: TypeScript, 87 testes de unidade, build e checagem do bundle passaram.
+- `npm run test:e2e`: 24 de 24.
+- `bash tests/test-db.sh` com PostgreSQL 18.1 no Windows: passou, com as verificações novas de `judge_cases`.
+- Servidor local real: 400, 422 e 405 conferidos com `curl`.
+- Não verificado: deploy da função, Judge0 real e Supabase real.
+
+**Decisões tomadas**
+
+- O contrato `JudgeGateway` perdeu `getResult`: nenhuma tela usava e a função responde de forma síncrona.
+- No modo remoto sem `VITE_JUDGE_URL`, o padrão é a função do próprio projeto: quem publica as migrations publica também a função.
+- Correção da análise inicial: o bundle publicado **não** continha casos ocultos (o minificador os removia); o risco era o módulo compartilhado com a tela.
+
+**Ficou de fora / limites conhecidos**
+
+- Resultado do judge não é salvo e não há limite de frequência (fatia 2 / CC-23, fora desta rodada).
+- Questões criadas na demo local ainda só têm o exemplo como caso; a fatia 3 acrescenta casos ocultos no editor.
+
+**Próximo passo esperado**
+
+1. Fatia 3 (CC-24) nesta mesma branch: rascunho, casos ocultos no editor, validação com solução de referência, publicar, editar e arquivar.
+2. Quem tiver o projeto Supabase: aplicar a migration nova e o seed, publicar `judge-submit` (passo a passo em [JUDGE-API.md](JUDGE-API.md#publicar-no-supabase)) e testar um envio real.
+
+**Bloqueios**
+
+- E1 (projeto Supabase) e E2 (qual Judge0) continuam abertas para homologar.
+
 ### 10/11/2026 · `codex/cc-03-remote-attempt-hints` · Codex · CC-02/03/04/05/06/07/18/20
 
 **Itens do backlog:** recomendações pendentes da passagem de Lucca concluídas no código e no banco local; homologação em Supabase real bloqueada por ausência de projeto/credenciais

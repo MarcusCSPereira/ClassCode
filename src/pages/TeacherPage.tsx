@@ -8,36 +8,46 @@ import {
   Plus,
   Users,
 } from 'lucide-react';
+import type { ComponentProps } from 'react';
 import type { Classroom } from '../lib/types';
 import type { ClassroomActivity, ProblemSummary } from '../data/repository';
 import ClassMetrics from '../components/ClassMetrics';
-import ProblemList from '../components/ProblemList';
+import TeacherProblemList from '../components/TeacherProblemList';
 export default function TeacherPage({
   teacher,
   classes,
   problems,
-  customProblems,
+  ownedProblems,
   solvedCount,
-  solved,
   loadActivity,
+  onReviewProgress,
   onCreateClass,
   onCreateProblem,
   onExport,
   onOpenProblem,
+  onEditProblem,
+  onPublishProblem,
+  onArchiveProblem,
+  onRestoreProblem,
   onChangeProfile,
   remote = false,
 }: {
   teacher: boolean;
   classes: Classroom[];
   problems: ProblemSummary[];
-  customProblems: ProblemSummary[];
+  /** Problems of the teacher's classes in every status (drafts and archived included). */
+  ownedProblems: ProblemSummary[];
   solvedCount: number;
-  solved: string[];
   loadActivity: (classroomId: string) => Promise<ClassroomActivity>;
+  onReviewProgress: ComponentProps<typeof ClassMetrics>['onReview'];
   onCreateClass: () => void;
   onCreateProblem: () => void;
   onExport: () => void;
   onOpenProblem: (p: ProblemSummary) => void;
+  onEditProblem: (p: ProblemSummary) => void;
+  onPublishProblem: (p: ProblemSummary) => void;
+  onArchiveProblem: (p: ProblemSummary) => void;
+  onRestoreProblem: (p: ProblemSummary) => void;
   onChangeProfile: () => void;
   remote?: boolean;
 }) {
@@ -82,8 +92,8 @@ export default function TeacherPage({
         </section>
         <section className="card">
           <Code2 />
-          <strong>{customProblems.length}</strong>
-          <span>Desafios autorais criados</span>
+          <strong>{ownedProblems.length}</strong>
+          <span>Questões das suas turmas</span>
         </section>
         <section className="card">
           <ListChecks />
@@ -144,22 +154,31 @@ export default function TeacherPage({
           </a>
         </section>
       </div>
-      <ClassMetrics classes={classes} problems={problems} loadActivity={loadActivity} />
+      <ClassMetrics
+        classes={classes}
+        problems={problems}
+        loadActivity={loadActivity}
+        onReview={onReviewProgress}
+      />
       <div className="section-heading">
-        <h2>Seus desafios publicados</h2>
-      </div>
-      {customProblems.length ? (
-        <ProblemList list={customProblems} solved={solved} onOpen={onOpenProblem} />
-      ) : (
-        <div className="empty card">
-          <Code2 size={30} />
-          <h3>O próximo desafio começa com você.</h3>
-          <p>Crie sua primeira questão seguindo o padrão ClassCode.</p>
-          <button className="button secondary" onClick={onCreateProblem}>
-            Criar primeiro desafio <Plus size={16} />
-          </button>
+        <div>
+          <h2>Suas questões</h2>
+          <p>Rascunhos ficam só com você até serem validados e publicados.</p>
         </div>
-      )}
+        <button className="button secondary" onClick={onCreateProblem}>
+          <Plus size={16} /> Nova questão
+        </button>
+      </div>
+      <TeacherProblemList
+        problems={ownedProblems}
+        classes={classes}
+        onCreate={onCreateProblem}
+        onOpen={onOpenProblem}
+        onEdit={onEditProblem}
+        onPublish={onPublishProblem}
+        onArchive={onArchiveProblem}
+        onRestore={onRestoreProblem}
+      />
     </>
   );
 }

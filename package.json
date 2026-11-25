@@ -10,7 +10,7 @@
     "test": "vitest run src",
     "test:watch": "vitest src",
     "test:e2e": "playwright test",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build && node scripts/check-bundle.mjs"
   },
   "keywords": [],
   "author": "",

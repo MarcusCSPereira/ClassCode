@@ -19,24 +19,26 @@ import {
   Waypoints,
   X,
 } from 'lucide-react';
-import { dataConfigurationError, dataMode, demoStore, repository, supabase } from './data';
+import { dataConfigurationError, dataMode, demoStore, judge, repository, supabase } from './data';
 import { FICTITIOUS_CLASS } from './data/fictitiousClass';
 import {
   describeError,
   RepositoryError,
+  type EditableProblem,
+  type ProblemInput,
   type ProblemSummary,
   type UserProfile,
 } from './data/repository';
 import type { ActivityRow } from './data/repository';
 import { modules, problems } from './lib/catalog';
-import { downloadJson, visibleProblems } from './lib/domain';
+import { downloadJson, isPublished, visibleProblems } from './lib/domain';
 import { currentModule, moduleStatuses, recommendNext } from './lib/progression';
 import { pageNames, problemIdFromHash, readPage, type Page } from './lib/navigation';
-import type { Language, Module, Role } from './lib/types';
+import type { Classroom, Language, Module, Role } from './lib/types';
 import { useTheme } from './lib/useTheme';
 import Modal from './components/Modal';
 import AuthPanel from './components/AuthPanel';
-import ProblemEditor from './components/ProblemEditor';
+import ProblemEditor, { type AfterSave } from './components/ProblemEditor';
 import ClassesPage from './pages/ClassesPage';
 import LabPage from './pages/LabPage';
 import OverviewPage from './pages/OverviewPage';
@@ -44,10 +46,12 @@ import ProblemPage, { type ProblemTab } from './pages/ProblemPage';
 import ProblemsPage from './pages/ProblemsPage';
 import RoadmapPage from './pages/RoadmapPage';
 import TeacherPage from './pages/TeacherPage';
+import ConfirmModal from './modals/ConfirmModal';
 import CreateClassModal from './modals/CreateClassModal';
 import HelpModal from './modals/HelpModal';
 import JoinClassModal from './modals/JoinClassModal';
 import ProfileModal from './modals/ProfileModal';
+import PublishProblemModal from './modals/PublishProblemModal';
 import ReportModal from './modals/ReportModal';
 import TopicModal from './modals/TopicModal';
 
@@ -80,6 +84,11 @@ export default function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [problemTab, setProblemTab] = useState<ProblemTab>('statement');
   const [visualContextProblemId, setVisualContextProblemId] = useState<string | null>(null);
+  // Problem lifecycle dialogs of the teacher panel.
+  const [editing, setEditing] = useState<EditableProblem | null>(null);
+  const [validating, setValidating] = useState<{ id: string; title: string } | null>(null);
+  const [archiving, setArchiving] = useState<ProblemSummary | null>(null);
+  const [rotating, setRotating] = useState<Classroom | null>(null);
   const fail = (error: unknown) => setNotice(describeError(error));
   const refreshRemote = useCallback(async () => {
     if (dataMode !== 'remote' || !session) return;
@@ -129,10 +138,17 @@ export default function App() {
   }, [refreshRemote]);
   const teacher = dataMode === 'remote' ? profile?.role === 'teacher' : state.role === 'teacher';
   const name = dataMode === 'remote' ? (profile?.displayName ?? 'Estudante') : state.name;
-  const all = useMemo(
+  const allProblems = useMemo(
     () => (dataMode === 'remote' ? remoteProblems : visibleProblems(problems, state)),
     [remoteProblems, state],
   );
+  // Practice, trail and metrics use published problems; the teacher manages the rest.
+  const all = useMemo(() => allProblems.filter(isPublished), [allProblems]);
+  const ownedProblems =
+    dataMode === 'remote'
+      ? // Only the owner receives a class's invite code.
+        allProblems.filter((p) => remoteClasses.some((c) => c.id === p.authorClassId && c.code))
+      : state.customProblems;
   const myClasses =
     dataMode === 'remote'
       ? remoteClasses
@@ -177,7 +193,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [state.startedAt, state.hintViews, state.reports]);
+  }, [state.startedAt, state.hintViews, state.reports, state.reviews]);
   const solved =
     dataMode === 'remote'
       ? (activity ?? []).filter((row) => row.reportedAt).map((row) => row.problemId)
@@ -211,6 +227,46 @@ export default function App() {
   }
   function announce(message: string) {
     setNotice(message);
+  }
+  /** Saves from the editor; a draft can go straight on to validation and publishing. */
+  async function saveProblem(input: ProblemInput, next: AfterSave): Promise<string | null> {
+    try {
+      const id = await repository.saveProblem(input);
+      if (dataMode === 'remote') await refreshRemote();
+      setModal(null);
+      setEditing(null);
+      navigate('teacher');
+      if (next === 'validate') setValidating({ id, title: input.title });
+      else
+        announce(
+          input.id
+            ? 'Questão atualizada.'
+            : 'Rascunho salvo. Valide e publique quando estiver pronto.',
+        );
+      return null;
+    } catch (error) {
+      return describeError(error);
+    }
+  }
+  async function editProblem(p: ProblemSummary) {
+    try {
+      setEditing(await repository.getProblemForEdit(p.id));
+    } catch (error) {
+      fail(error);
+    }
+  }
+  async function changeProblemStatus(
+    problemId: string,
+    status: 'draft' | 'published' | 'archived',
+    message: string,
+  ) {
+    try {
+      await repository.setProblemStatus(problemId, status);
+      if (dataMode === 'remote') await refreshRemote();
+      announce(message);
+    } catch (error) {
+      fail(error);
+    }
   }
   /** Opens the recommended problem; with the trail finished, shows the whole trail. */
   function practice() {
@@ -413,6 +469,7 @@ export default function App() {
               onPrimaryAction={() => setModal(teacher ? 'create-class' : 'join')}
               onOpenProblem={openProblem}
               onAnnounce={announce}
+              onRotateInvite={teacher ? setRotating : undefined}
               remote={dataMode === 'remote'}
             />
           )}
@@ -421,22 +478,39 @@ export default function App() {
               teacher={teacher}
               classes={dataMode === 'remote' ? remoteClasses : [...state.classes, FICTITIOUS_CLASS]}
               problems={all}
-              customProblems={dataMode === 'remote' ? all : state.customProblems}
+              ownedProblems={ownedProblems}
               solvedCount={solvedCount}
-              solved={solved}
               loadActivity={loadClassroomActivity}
+              onReviewProgress={async (problemId, studentId, status, comment) => {
+                // Failures reach the student detail dialog, which shows them inline.
+                await repository.reviewProgress(problemId, studentId, status, comment);
+                announce(
+                  status === 'reviewed'
+                    ? 'Conclusão marcada como revisada.'
+                    : status === 'clear'
+                      ? 'Revisão desfeita.'
+                      : 'Pedido de ajuste enviado ao aluno.',
+                );
+              }}
               onCreateClass={() => setModal('create-class')}
               onCreateProblem={() => setModal('create-problem')}
               onExport={() =>
                 downloadJson(
-                  {
-                    classes: myClasses,
-                    problems: dataMode === 'remote' ? all : state.customProblems,
-                  },
+                  { classes: myClasses, problems: ownedProblems },
                   'classcode-conteudo.json',
                 )
               }
               onOpenProblem={openProblem}
+              onEditProblem={(p) => void editProblem(p)}
+              onPublishProblem={(p) => setValidating({ id: p.id, title: p.title })}
+              onArchiveProblem={setArchiving}
+              onRestoreProblem={(p) =>
+                void changeProblemStatus(
+                  p.id,
+                  'draft',
+                  `“${p.title}” voltou como rascunho. Publique quando estiver pronto.`,
+                )
+              }
               onChangeProfile={() => setModal('profile')}
               remote={dataMode === 'remote'}
             />
@@ -445,6 +519,8 @@ export default function App() {
             <ProblemPage
               key={activeProblem.id}
               problem={activeProblem}
+              judge={judge}
+              review={activityByProblem[activeProblem.id]?.review}
               startedAt={
                 dataMode === 'remote'
                   ? Date.parse(activityByProblem[activeProblem.id]?.startedAt ?? '') || undefined
@@ -581,23 +657,80 @@ export default function App() {
       {modal === 'create-problem' && teacher && (
         <Modal title="Um desafio com propósito" onClose={() => setModal(null)} wide>
           <ProblemEditor
-            classes={myClasses}
+            // In the remote mode, only classes the teacher owns (they carry the invite code).
+            classes={dataMode === 'remote' ? myClasses.filter((c) => c.code) : myClasses}
             remote={dataMode === 'remote'}
-            onSave={(p) =>
-              repository.publishProblem(p).then(async () => {
-                if (dataMode === 'remote') await refreshRemote();
-                setModal(null);
-                navigate('teacher');
-                announce(
-                  dataMode === 'remote'
-                    ? 'Desafio publicado para a turma.'
-                    : 'Desafio publicado na demonstração.',
-                );
-                return null;
-              }, describeError)
-            }
+            onSave={saveProblem}
           />
         </Modal>
+      )}
+      {editing && teacher && (
+        <Modal title="Editar questão" onClose={() => setEditing(null)} wide>
+          <ProblemEditor
+            classes={myClasses}
+            initial={editing}
+            remote={dataMode === 'remote'}
+            onSave={saveProblem}
+          />
+        </Modal>
+      )}
+      {validating && teacher && (
+        <PublishProblemModal
+          problem={validating}
+          judge={judge}
+          onPublish={async () => {
+            await changeProblemStatus(
+              validating.id,
+              'published',
+              `“${validating.title}” publicada para a turma.`,
+            );
+            setValidating(null);
+          }}
+          onClose={() => setValidating(null)}
+        />
+      )}
+      {archiving && teacher && (
+        <ConfirmModal
+          title="Arquivar questão?"
+          confirmLabel="Arquivar"
+          onConfirm={async () => {
+            await changeProblemStatus(
+              archiving.id,
+              'archived',
+              `“${archiving.title}” arquivada. Você pode restaurá-la quando quiser.`,
+            );
+            setArchiving(null);
+          }}
+          onClose={() => setArchiving(null)}
+        >
+          <p>
+            <strong>{archiving.title}</strong> deixa de aparecer para os alunos e sai do
+            acompanhamento da turma. O que os alunos já fizeram fica guardado, e a questão pode ser
+            restaurada como rascunho.
+          </p>
+        </ConfirmModal>
+      )}
+      {rotating && teacher && (
+        <ConfirmModal
+          title="Gerar novo código?"
+          confirmLabel="Gerar novo código"
+          onConfirm={async () => {
+            try {
+              const code = await repository.rotateInvite(rotating.id);
+              if (dataMode === 'remote') await refreshRemote();
+              announce(`Novo código de ${rotating.name}: ${code}. O anterior não funciona mais.`);
+            } catch (error) {
+              fail(error);
+            }
+            setRotating(null);
+          }}
+          onClose={() => setRotating(null)}
+        >
+          <p>
+            O código atual de <strong>{rotating.name}</strong> deixa de funcionar imediatamente.
+            Quem já está na turma continua matriculado; novos alunos precisam do código novo.
+          </p>
+        </ConfirmModal>
       )}
       {modal === 'report' && (
         <ReportModal

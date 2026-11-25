@@ -19,10 +19,15 @@ import {
 /** The demo has a single local identity shared by the student and teacher perspectives. */
 export const DEMO_USER_ID = 'demo-user';
 const iso = (ms: number) => new Date(ms).toISOString();
-const withoutHintText = (p: Problem): ProblemSummary => ({
-  ...p,
-  hints: p.hints.map(({ afterSeconds }) => ({ afterSeconds })),
-});
+/** Lists never carry hint text or hidden cases, as in the remote mode. */
+function toSummary(p: Problem): ProblemSummary {
+  const summary: ProblemSummary & { tests?: unknown } = {
+    ...p,
+    hints: p.hints.map(({ afterSeconds }) => ({ afterSeconds })),
+  };
+  delete summary.tests;
+  return summary;
+}
 /** The seeded class receives the catalog; other classes only their own problems. */
 function classroomProblemIds(catalog: Problem[], state: DemoState, classroomId: string) {
   return new Set(
@@ -42,6 +47,12 @@ export function createDemoRepository(
     if (!problem) throw new RepositoryError('problem_not_accessible');
     return problem;
   }
+  /** Problems the teacher wrote in this browser; catalog problems are not editable. */
+  function ownProblem(problemId: string) {
+    const problem = state().customProblems.find((p) => p.id === problemId);
+    if (!problem) throw new RepositoryError('owner_required');
+    return problem;
+  }
   function requireTeacher() {
     if (state().role !== 'teacher') throw new RepositoryError('teacher_required');
   }
@@ -51,6 +62,7 @@ export function createDemoRepository(
       .filter(([problemId]) => !problemIds || problemIds.has(problemId))
       .map(([problemId, startedAt]): ActivityRow => {
         const report = s.reports[problemId];
+        const review = report && s.reviews?.[problemId];
         return {
           studentId: DEMO_USER_ID,
           problemId,
@@ -62,10 +74,25 @@ export function createDemoRepository(
           ...(report && {
             reportedAt: iso(report.reportedAt),
             verification: 'self_reported' as const,
+            evidence: report.evidence,
+          }),
+          ...(review && {
+            review: {
+              status: review.status,
+              ...(review.comment && { comment: review.comment }),
+              reviewedAt: iso(review.reviewedAt),
+            },
           }),
         };
       });
   }
+  /** Removes the review of a problem, as the database does when the completion changes. */
+  const withoutReview = (s: DemoState, problemId: string): DemoState => {
+    if (!s.reviews?.[problemId]) return s;
+    const reviews = { ...s.reviews };
+    delete reviews[problemId];
+    return { ...s, reviews };
+  };
   return {
     mode: 'demo',
     async getProfile() {
@@ -107,7 +134,7 @@ export function createDemoRepository(
       return 0;
     },
     async listProblems() {
-      return visibleProblems(catalog, state()).map(withoutHintText);
+      return visibleProblems(catalog, state()).map(toSummary);
     },
     async publishProblem(input) {
       requireTeacher();
@@ -119,9 +146,67 @@ export function createDemoRepository(
         ...input,
         id: crypto.randomUUID(),
         source: 'Questão do professor · demonstração local',
+        status: 'published',
       };
       store.update((s) => ({ ...s, customProblems: [...s.customProblems, problem] }));
       return problem.id;
+    },
+    async saveProblem(input) {
+      requireTeacher();
+      const invalid = validateProblem(input);
+      if (invalid) throw new RepositoryError('invalid_problem', invalid);
+      const existing = input.id ? ownProblem(input.id) : undefined;
+      if (existing && existing.authorClassId !== input.authorClassId)
+        throw new RepositoryError('invalid_problem');
+      if (!state().classes.some((c) => c.id === input.authorClassId))
+        throw new RepositoryError('owner_required');
+      const problem: Problem = {
+        ...input,
+        id: existing?.id ?? crypto.randomUUID(),
+        source: 'Questão do professor · demonstração local',
+        // Problems saved before drafts existed have no status and are published.
+        status: existing ? (existing.status ?? 'published') : 'draft',
+      };
+      store.update((s) => ({
+        ...s,
+        customProblems: existing
+          ? s.customProblems.map((p) => (p.id === problem.id ? problem : p))
+          : [...s.customProblems, problem],
+      }));
+      return problem.id;
+    },
+    async getProblemForEdit(problemId) {
+      requireTeacher();
+      const p = ownProblem(problemId);
+      return {
+        id: p.id,
+        authorClassId: p.authorClassId!,
+        moduleId: p.moduleId,
+        title: p.title,
+        difficulty: p.difficulty,
+        minutes: p.minutes,
+        objective: p.objective,
+        statement: p.statement,
+        input: p.input,
+        output: p.output,
+        constraints: p.constraints,
+        exampleInput: p.exampleInput,
+        exampleOutput: p.exampleOutput,
+        hints: p.hints,
+        ...(p.externalUrl && { externalUrl: p.externalUrl }),
+        tests: p.tests ?? [],
+        status: p.status ?? 'published',
+        // The single demo identity is the only student who can have opened it.
+        attempts: state().startedAt[problemId] ? 1 : 0,
+      };
+    },
+    async setProblemStatus(problemId, status) {
+      requireTeacher();
+      ownProblem(problemId);
+      store.update((s) => ({
+        ...s,
+        customProblems: s.customProblems.map((p) => (p.id === problemId ? { ...p, status } : p)),
+      }));
     },
     async startAttempt(problemId) {
       accessibleProblem(problemId);
@@ -152,22 +237,58 @@ export function createDemoRepository(
       const text = evidence.trim();
       if (!text || text.length > 2000) throw new RepositoryError('invalid_evidence');
       if (!state().startedAt[problemId]) throw new RepositoryError('attempt_required');
-      store.update((s) => ({
-        ...s,
-        reports: {
-          ...s.reports,
-          // Like the database, editing the evidence keeps the original report time.
-          [problemId]: { evidence: text, reportedAt: s.reports[problemId]?.reportedAt ?? now() },
-        },
-      }));
+      store.update((s) => {
+        const changed = s.reports[problemId]?.evidence !== text;
+        const next = {
+          ...s,
+          reports: {
+            ...s.reports,
+            // Like the database, editing the evidence keeps the original report time.
+            [problemId]: { evidence: text, reportedAt: s.reports[problemId]?.reportedAt ?? now() },
+          },
+        };
+        // New evidence needs a new look from the teacher.
+        return changed ? withoutReview(next, problemId) : next;
+      });
     },
     async reopenProblem(problemId) {
       store.update((s) => {
         if (!s.reports[problemId]) return s;
         const reports = { ...s.reports };
         delete reports[problemId];
-        return { ...s, reports };
+        return withoutReview({ ...s, reports }, problemId);
       });
+    },
+    async reviewProgress(problemId, studentId, status, comment) {
+      requireTeacher();
+      // The fictitious class is read-only; the local identity is the only real student.
+      if (studentId !== DEMO_USER_ID) throw new RepositoryError('owner_required');
+      if (!state().reports[problemId]) throw new RepositoryError('report_required');
+      if (status === 'clear') {
+        store.update((s) => withoutReview(s, problemId));
+        return;
+      }
+      const text = comment?.trim() ?? '';
+      if ((status === 'changes_requested' && !text) || text.length > 1000)
+        throw new RepositoryError('invalid_review');
+      store.update((s) => ({
+        ...s,
+        reviews: {
+          ...s.reviews,
+          [problemId]: { status, ...(text && { comment: text }), reviewedAt: now() },
+        },
+      }));
+    },
+    async rotateInvite(classroomId) {
+      requireTeacher();
+      if (!state().classes.some((c) => c.id === classroomId))
+        throw new RepositoryError('owner_required');
+      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+      store.update((s) => ({
+        ...s,
+        classes: s.classes.map((c) => (c.id === classroomId ? { ...c, code } : c)),
+      }));
+      return code;
     },
     async myActivity() {
       return activityRows();

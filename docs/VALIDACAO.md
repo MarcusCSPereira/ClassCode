@@ -99,3 +99,65 @@ Turma fictícia para demonstrar o painel do professor.
 - PostgreSQL 16.13 temporário: migrations, seed e testes cobrem Auth emulado, negações, listagens isoladas, publicação, evidência/reabertura, atividade e importação idempotente dos sete modelos privados.
 - Playwright: **22 de 22** fluxos passaram em desktop e celular, preservando o modo demo. O novo cenário abre o laboratório a partir de `binary` e confirma a persistência da previsão/explicação ao navegar e recarregar. O loop de atualização observado anteriormente foi corrigido e o aviso não reapareceu na execução final.
 - Não executado: aplicação das migrations em Supabase real e testes via JWT/PostgREST em dois navegadores. Este ambiente não possui `.env` nem acesso configurado a um projeto Supabase; isso continua sendo condição de aceite de CC-01/09, não deve ser substituído pelo Auth emulado.
+
+## Entrega 4 · fatia 1 / CC-22 (24/11/2026)
+
+Judge confiável: endereço configurável, casos de teste no servidor e checagem do bundle.
+
+- `npm run check`: TypeScript, **87 testes de unidade em 10 arquivos**, build e a nova checagem `scripts/check-bundle.mjs`. Os testes novos cobrem a escolha do endereço, o envio só do código com cabeçalhos de sessão, a tradução de erros HTTP e de rede, o executor do Judge0 (todos os casos, parada no primeiro erro sem devolver saída oculta, polling), a validação do corpo, os códigos 401/403/422/502 do tratador e a igualdade entre os casos do seed e os da demo.
+- A checagem do bundle acusou amostras sintéticas de vazamento nos dois formatos (`\n` escapado e quebra de linha real) e passou no build atual. O primeiro filtro dava falso positivo com `999999999`, presente numa tabela numérica de biblioteca; agora só valores com mais de uma palavra contam.
+- `npm run test:e2e`: **24 de 24** (12 cenários × desktop e celular). O novo cenário intercepta `/api/judge/submit`: confere que o envio leva só `problemId`, `language`, `sourceCode` e `idempotencyKey`, que o veredito aparece e que um 404 vira a mensagem "judge-submit foi publicada".
+- Servidor local de verdade (`npm run dev`, sem interceptação): corpo inválido → 400, desafio sem casos → 422, `GET` → 405. Nenhuma chamada ao Judge0 público foi feita.
+- `bash tests/test-db.sh` em PostgreSQL 18.1 no Windows (o script agora usa `127.0.0.1:54329` no Git Bash): passou com as verificações novas de `judge_cases`. Só a chave de serviço executa a função; o aluno matriculado recebe os 4 casos de `sum` com o exemplo primeiro; o dono roda rascunho; aluno de outra turma, outro professor, aluno em rascunho e requisitante nulo recebem negação; a trilha importada recebe os 31 casos.
+- Site publicado (antes desta fatia): o botão respondia "Falha ao submeter código (HTTP 405)"; o bundle publicado não continha casos ocultos.
+- Não verificado: deploy da Edge Function e chamadas reais ao Judge0 e ao Supabase (sem projeto configurado).
+
+## Entrega 4 · fatia 3 / CC-24 (24/11/2026)
+
+Ciclo da questão do professor: rascunho, casos ocultos, validação, publicação, edição e arquivo.
+
+- `npm run check`: TypeScript, **93 testes de unidade**, build e checagem do bundle. Novos:
+  - demo: rascunho oculto do aluno, edição que mantém id e estado, recusa de mudar de turma, de caso sem saída e de editar o catálogo, contagem de quem abriu, arquivar e restaurar, e questões antigas sem estado que continuam publicadas;
+  - remoto: nomes e argumentos de `save_problem`, `get_problem_for_edit` e `set_problem_status`, e recusa de estado desconhecido ou edição sem casos;
+  - domínio: visibilidade por estado e limites dos casos ocultos.
+- `npm run test:e2e`: **26 de 26** (13 cenários × desktop e celular).
+  - O cenário antigo "professor cria turma e questão" foi **ajustado** ao fluxo novo: rascunho → "Publicar sem validar" → "Abrir".
+  - O novo cenário faz o ciclo completo: cria rascunho com caso oculto; confere que o aluno não o vê; valida com solução de referência (judge interceptado), conferindo que a questão local envia o exemplo e o caso oculto; publica; edita com os casos preenchidos; o aluno vê; arquiva com confirmação; o aluno deixa de ver; restaura como rascunho.
+- `bash tests/test-db.sh` (PostgreSQL 18.1, Windows): passou com as verificações novas:
+  - o rascunho nasce oculto e o dono lê dicas e casos;
+  - o caso 1 é o exemplo;
+  - aluno e outro professor recebem negação para ler, editar, publicar, arquivar e criar;
+  - mudar de turma, 20 casos ocultos, saída vazia, minutos não numéricos e estado desconhecido são recusados;
+  - publicar, abrir, contar tentativas, arquivar, negar acesso e restaurar funcionam.
+- Revisão visual: lista "Suas questões" (desktop claro e celular escuro, sem rolagem horizontal), editor com casos ocultos e janela "Validar e publicar".
+- Não verificado: Supabase real e Judge0 real.
+
+## Entrega 4 · fatia 4 / CC-25 (24/11/2026)
+
+Revisão das conclusões pelo professor, retorno ao aluno e troca do código de convite.
+
+- `npm run check`: TypeScript, **99 testes de unidade**, build e checagem do bundle. Novos:
+  - demo:
+    - revisar exige perspectiva de professor e conclusão;
+    - aluno da turma fictícia é recusado;
+    - "ajuste pedido" sem comentário e comentário com mais de 1000 caracteres são recusados;
+    - a mesma evidência mantém a revisão, e evidência nova, "Desfazer" e reabrir a apagam;
+    - trocar o convite nega a turma fictícia e o aluno, o código antigo deixa de entrar e o novo entra;
+  - remoto: argumentos de `review_progress` (incluindo `clear` com comentário nulo) e de `rotate_invite`, conversão de `review` na atividade e recusa de estado ou comentário inválidos;
+  - métricas: `reviewed` / `changesRequested` por aluno e os sufixos "· revisada" e "· ajuste pedido" no mapa;
+  - turma fictícia: evidência em toda conclusão, um exemplo de cada revisão, revisão depois da conclusão e nunca no futuro.
+- `npm run test:e2e`: **32 de 32** (16 cenários × desktop e celular). Três cenários novos:
+  - **Ida e volta da revisão:** o aluno conclui; o professor abre "Ver detalhes de Alex", lê a evidência e pede ajuste com comentário; o mapa mostra "ajuste pedido"; o aluno vê "Retorno do professor" com o comentário; o aluno atualiza a evidência e o pedido some; o professor marca como revisada; o aluno vê "Seu professor revisou esta conclusão."
+  - **Turma fictícia:** o detalhe de Elisa T. mostra o exemplo de ajuste pedido, o aviso de somente leitura e nenhum botão de revisão, sem rolagem horizontal.
+  - **Troca do convite:** o botão não aparece na turma fictícia; depois de confirmar, o código muda; o código antigo é recusado na entrada e o novo funciona.
+- `bash tests/test-db.sh` (PostgreSQL 18.1, Windows): passou com as verificações de revisão e convite:
+  - sem conclusão não há revisão, e o ajuste exige comentário;
+  - o aluno lê o retorno;
+  - evidência nova zera, reabrir apaga e o dono pode desfazer;
+  - aluno e outro professor recebem negação;
+  - o código antigo falha e o novo funciona.
+- Revisão visual do detalhe do aluno (desktop e celular escuros, celular claro, sem rolagem horizontal) e do retorno na tela do desafio. Ela encontrou e corrigiu três problemas:
+  - campos de formulário ilegíveis no tema escuro (fundo branco com texto claro; o problema já existia em todos os formulários);
+  - o comentário da revisão quebrava a linha antes dos dois-pontos;
+  - "0 revisada(s)" virou "0 revisadas".
+- Não verificado: Supabase real (migration `202611240003`, script de promoção) e Judge0 real.

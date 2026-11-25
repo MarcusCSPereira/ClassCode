@@ -131,3 +131,33 @@ Ciclo da questão do professor: rascunho, casos ocultos, validação, publicaç�
   - publicar, abrir, contar tentativas, arquivar, negar acesso e restaurar funcionam.
 - Revisão visual: lista "Suas questões" (desktop claro e celular escuro, sem rolagem horizontal), editor com casos ocultos e janela "Validar e publicar".
 - Não verificado: Supabase real e Judge0 real.
+
+## Entrega 4 · fatia 4 / CC-25 (24/11/2026)
+
+Revisão das conclusões pelo professor, retorno ao aluno e troca do código de convite.
+
+- `npm run check`: TypeScript, **99 testes de unidade**, build e checagem do bundle. Novos:
+  - demo:
+    - revisar exige perspectiva de professor e conclusão;
+    - aluno da turma fictícia é recusado;
+    - "ajuste pedido" sem comentário e comentário com mais de 1000 caracteres são recusados;
+    - a mesma evidência mantém a revisão, e evidência nova, "Desfazer" e reabrir a apagam;
+    - trocar o convite nega a turma fictícia e o aluno, o código antigo deixa de entrar e o novo entra;
+  - remoto: argumentos de `review_progress` (incluindo `clear` com comentário nulo) e de `rotate_invite`, conversão de `review` na atividade e recusa de estado ou comentário inválidos;
+  - métricas: `reviewed` / `changesRequested` por aluno e os sufixos "· revisada" e "· ajuste pedido" no mapa;
+  - turma fictícia: evidência em toda conclusão, um exemplo de cada revisão, revisão depois da conclusão e nunca no futuro.
+- `npm run test:e2e`: **32 de 32** (16 cenários × desktop e celular). Três cenários novos:
+  - **Ida e volta da revisão:** o aluno conclui; o professor abre "Ver detalhes de Alex", lê a evidência e pede ajuste com comentário; o mapa mostra "ajuste pedido"; o aluno vê "Retorno do professor" com o comentário; o aluno atualiza a evidência e o pedido some; o professor marca como revisada; o aluno vê "Seu professor revisou esta conclusão."
+  - **Turma fictícia:** o detalhe de Elisa T. mostra o exemplo de ajuste pedido, o aviso de somente leitura e nenhum botão de revisão, sem rolagem horizontal.
+  - **Troca do convite:** o botão não aparece na turma fictícia; depois de confirmar, o código muda; o código antigo é recusado na entrada e o novo funciona.
+- `bash tests/test-db.sh` (PostgreSQL 18.1, Windows): passou com as verificações de revisão e convite:
+  - sem conclusão não há revisão, e o ajuste exige comentário;
+  - o aluno lê o retorno;
+  - evidência nova zera, reabrir apaga e o dono pode desfazer;
+  - aluno e outro professor recebem negação;
+  - o código antigo falha e o novo funciona.
+- Revisão visual do detalhe do aluno (desktop e celular escuros, celular claro, sem rolagem horizontal) e do retorno na tela do desafio. Ela encontrou e corrigiu três problemas:
+  - campos de formulário ilegíveis no tema escuro (fundo branco com texto claro; o problema já existia em todos os formulários);
+  - o comentário da revisão quebrava a linha antes dos dois-pontos;
+  - "0 revisada(s)" virou "0 revisadas".
+- Não verificado: Supabase real (migration `202611240003`, script de promoção) e Judge0 real.

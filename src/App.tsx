@@ -34,7 +34,7 @@ import { modules, problems } from './lib/catalog';
 import { downloadJson, isPublished, visibleProblems } from './lib/domain';
 import { currentModule, moduleStatuses, recommendNext } from './lib/progression';
 import { pageNames, problemIdFromHash, readPage, type Page } from './lib/navigation';
-import type { Language, Module, Role } from './lib/types';
+import type { Classroom, Language, Module, Role } from './lib/types';
 import { useTheme } from './lib/useTheme';
 import Modal from './components/Modal';
 import AuthPanel from './components/AuthPanel';
@@ -88,6 +88,7 @@ export default function App() {
   const [editing, setEditing] = useState<EditableProblem | null>(null);
   const [validating, setValidating] = useState<{ id: string; title: string } | null>(null);
   const [archiving, setArchiving] = useState<ProblemSummary | null>(null);
+  const [rotating, setRotating] = useState<Classroom | null>(null);
   const fail = (error: unknown) => setNotice(describeError(error));
   const refreshRemote = useCallback(async () => {
     if (dataMode !== 'remote' || !session) return;
@@ -192,7 +193,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [state.startedAt, state.hintViews, state.reports]);
+  }, [state.startedAt, state.hintViews, state.reports, state.reviews]);
   const solved =
     dataMode === 'remote'
       ? (activity ?? []).filter((row) => row.reportedAt).map((row) => row.problemId)
@@ -468,6 +469,7 @@ export default function App() {
               onPrimaryAction={() => setModal(teacher ? 'create-class' : 'join')}
               onOpenProblem={openProblem}
               onAnnounce={announce}
+              onRotateInvite={teacher ? setRotating : undefined}
               remote={dataMode === 'remote'}
             />
           )}
@@ -479,6 +481,17 @@ export default function App() {
               ownedProblems={ownedProblems}
               solvedCount={solvedCount}
               loadActivity={loadClassroomActivity}
+              onReviewProgress={async (problemId, studentId, status, comment) => {
+                // Failures reach the student detail dialog, which shows them inline.
+                await repository.reviewProgress(problemId, studentId, status, comment);
+                announce(
+                  status === 'reviewed'
+                    ? 'Conclusão marcada como revisada.'
+                    : status === 'clear'
+                      ? 'Revisão desfeita.'
+                      : 'Pedido de ajuste enviado ao aluno.',
+                );
+              }}
               onCreateClass={() => setModal('create-class')}
               onCreateProblem={() => setModal('create-problem')}
               onExport={() =>
@@ -507,6 +520,7 @@ export default function App() {
               key={activeProblem.id}
               problem={activeProblem}
               judge={judge}
+              review={activityByProblem[activeProblem.id]?.review}
               startedAt={
                 dataMode === 'remote'
                   ? Date.parse(activityByProblem[activeProblem.id]?.startedAt ?? '') || undefined
@@ -693,6 +707,28 @@ export default function App() {
             <strong>{archiving.title}</strong> deixa de aparecer para os alunos e sai do
             acompanhamento da turma. O que os alunos já fizeram fica guardado, e a questão pode ser
             restaurada como rascunho.
+          </p>
+        </ConfirmModal>
+      )}
+      {rotating && teacher && (
+        <ConfirmModal
+          title="Gerar novo código?"
+          confirmLabel="Gerar novo código"
+          onConfirm={async () => {
+            try {
+              const code = await repository.rotateInvite(rotating.id);
+              if (dataMode === 'remote') await refreshRemote();
+              announce(`Novo código de ${rotating.name}: ${code}. O anterior não funciona mais.`);
+            } catch (error) {
+              fail(error);
+            }
+            setRotating(null);
+          }}
+          onClose={() => setRotating(null)}
+        >
+          <p>
+            O código atual de <strong>{rotating.name}</strong> deixa de funcionar imediatamente.
+            Quem já está na turma continua matriculado; novos alunos precisam do código novo.
           </p>
         </ConfirmModal>
       )}

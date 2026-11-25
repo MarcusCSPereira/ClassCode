@@ -189,6 +189,37 @@ describe('métricas da turma', () => {
     expect(Object.keys(report.map.ana)).toEqual(problems.map((p) => p.id));
   });
 
+  it('conta e descreve as conclusões revisadas pelo professor', () => {
+    const reviewedAt = ago(10);
+    const reviewed = classroomMetrics(
+      modules,
+      problems,
+      {
+        ...turma,
+        activity: turma.activity.map((r) =>
+          r.studentId !== 'eva' || !r.reportedAt
+            ? r
+            : {
+                ...r,
+                review:
+                  r.problemId === 'sum'
+                    ? { status: 'reviewed' as const, reviewedAt }
+                    : r.problemId === 'parity'
+                      ? { status: 'changes_requested' as const, comment: 'Explique.', reviewedAt }
+                      : undefined,
+              },
+        ),
+      },
+      NOW,
+    );
+    const eva = reviewed.students.find((s) => s.displayName === 'Eva')!;
+    expect(eva).toMatchObject({ completed: 3, reviewed: 1, changesRequested: 1 });
+    expect(byName('Eva')).toMatchObject({ reviewed: 0, changesRequested: 0 });
+    expect(describeCell(reviewed.map.eva.sum)).toBe('Concluiu com 3 dicas · revisada');
+    expect(describeCell(reviewed.map.eva.parity)).toBe('Concluiu com 3 dicas · ajuste pedido');
+    expect(describeCell(reviewed.map.eva.maximum)).toBe('Concluiu com 2 dicas');
+  });
+
   it('lida com turma vazia', () => {
     const empty = classroomMetrics(modules, problems, { roster: [], activity: [] }, NOW);
     expect(empty).toMatchObject({

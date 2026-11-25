@@ -8,6 +8,7 @@ import {
   Plus,
   Users,
 } from 'lucide-react';
+import type { ComponentProps } from 'react';
 import type { Classroom } from '../lib/types';
 import type { ClassroomActivity, ProblemSummary } from '../data/repository';
 import ClassMetrics from '../components/ClassMetrics';
@@ -19,6 +20,7 @@ export default function TeacherPage({
   ownedProblems,
   solvedCount,
   loadActivity,
+  onReviewProgress,
   onCreateClass,
   onCreateProblem,
   onExport,
@@ -37,6 +39,7 @@ export default function TeacherPage({
   ownedProblems: ProblemSummary[];
   solvedCount: number;
   loadActivity: (classroomId: string) => Promise<ClassroomActivity>;
+  onReviewProgress: ComponentProps<typeof ClassMetrics>['onReview'];
   onCreateClass: () => void;
   onCreateProblem: () => void;
   onExport: () => void;
@@ -151,7 +154,12 @@ export default function TeacherPage({
           </a>
         </section>
       </div>
-      <ClassMetrics classes={classes} problems={problems} loadActivity={loadActivity} />
+      <ClassMetrics
+        classes={classes}
+        problems={problems}
+        loadActivity={loadActivity}
+        onReview={onReviewProgress}
+      />
       <div className="section-heading">
         <div>
           <h2>Suas questões</h2>

@@ -456,3 +456,113 @@ test('professor cria rascunho com caso oculto, valida, publica, edita, arquiva e
     .click();
   await expect(published).toContainText('Rascunho');
 });
+
+async function switchPerspective(page: Page, role: 'student' | 'teacher') {
+  await page.getByRole('button', { name: 'Alterar perfil da demonstração' }).click();
+  await page.getByRole('combobox', { name: 'Perspectiva', exact: true }).selectOption(role);
+  await page.getByRole('button', { name: 'Acessar demonstração' }).click();
+}
+async function saveReport(page: Page, evidence: string) {
+  await page.getByLabel('Link da submissão ou reflexão sobre a solução').fill(evidence);
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Salvar conclusão declarada' }).click();
+}
+
+test('professor revisa a conclusão, pede ajuste e o aluno vê o retorno', async ({ page }) => {
+  await page.goto('/#problem/sum');
+  await page.getByRole('button', { name: 'Registrar conclusão', exact: true }).click();
+  await saveReport(page, 'Somei os dois números.');
+
+  await switchPerspective(page, 'teacher');
+  const panel = page.getByRole('region', { name: 'Acompanhamento da turma' });
+  await panel.getByRole('button', { name: 'Ver detalhes de Alex' }).click();
+  const detail = page.getByRole('dialog', { name: 'Alex' });
+  await expect(detail.locator('.evidence-text')).toHaveText('Somei os dois números.');
+  await detail.getByRole('button', { name: 'Pedir ajuste em O primeiro de muitos' }).click();
+  await detail
+    .getByLabel('O que o aluno deve ajustar em O primeiro de muitos')
+    .fill('Teste também o caso 0 0.');
+  await detail.getByRole('button', { name: 'Enviar pedido de ajuste' }).click();
+  await expect(detail).toContainText('Ajuste pedido em');
+  await expect(detail).toContainText('Concluiu sem dica · ajuste pedido');
+  await detail.getByRole('button', { name: 'Fechar' }).click();
+  await expect(
+    panel.getByRole('region', { name: 'Mapa aluno × questão' }).getByRole('row', { name: /Alex/ }),
+  ).toContainText('ajuste pedido');
+
+  await switchPerspective(page, 'student');
+  await page.goto('/#problem/sum');
+  const feedback = page.getByRole('note', { name: 'Retorno do professor' });
+  await expect(feedback).toContainText('Seu professor pediu um ajuste.');
+  await expect(feedback).toContainText('Teste também o caso 0 0.');
+  // New evidence needs a new look from the teacher, so the request goes away.
+  await page.getByRole('button', { name: 'Conclusão declarada · ver registro' }).click();
+  await saveReport(page, 'Somei os dois números e testei 0 0.');
+  await expect(feedback).toHaveCount(0);
+
+  await switchPerspective(page, 'teacher');
+  await panel.getByRole('button', { name: 'Ver detalhes de Alex' }).click();
+  await expect(detail.locator('.evidence-text')).toHaveText('Somei os dois números e testei 0 0.');
+  await expect(detail).not.toContainText('Ajuste pedido em');
+  await detail.getByRole('button', { name: 'Marcar O primeiro de muitos como revisada' }).click();
+  await expect(detail).toContainText('Revisada em');
+  await expect(
+    detail.getByRole('button', { name: 'Marcar O primeiro de muitos como revisada' }),
+  ).toHaveCount(0);
+  await detail.getByRole('button', { name: 'Fechar' }).click();
+
+  await switchPerspective(page, 'student');
+  await page.goto('/#problem/sum');
+  await expect(feedback).toContainText('Seu professor revisou esta conclusão.');
+});
+
+test('turma fictícia mostra revisões de exemplo sem permitir revisar', async ({ page }) => {
+  await page.goto('/');
+  await switchPerspective(page, 'teacher');
+  const panel = page.getByRole('region', { name: 'Acompanhamento da turma' });
+  await panel
+    .getByLabel('Turma acompanhada')
+    .selectOption({ label: 'Turma de demonstração · dados fictícios' });
+  await panel.getByRole('button', { name: 'Ver detalhes de Elisa T.' }).click();
+  const detail = page.getByRole('dialog', { name: 'Elisa T.' });
+  await expect(detail.getByRole('note')).toContainText('a revisão fica desativada');
+  await expect(detail).toContainText('Ajuste pedido em');
+  await expect(detail.getByRole('button', { name: /Marcar .* como revisada/ })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
+test('professor gera novo código e o anterior deixa de funcionar', async ({ page }) => {
+  await page.goto('/');
+  await switchPerspective(page, 'teacher');
+  await page.getByRole('button', { name: 'Criar uma turma', exact: false }).click();
+  await page.getByLabel('Nome da turma').fill('Turma rotativa');
+  await page.getByRole('button', { name: 'Criar turma', exact: true }).last().click();
+  const card = page.locator('.classroom-card').filter({ hasText: 'Turma rotativa' });
+  const oldCode = await card.locator('.class-code strong').innerText();
+  await expect(
+    page
+      .locator('.classroom-card')
+      .filter({ hasText: 'dados fictícios' })
+      .getByRole('button', { name: /Gerar novo código/ }),
+  ).toHaveCount(0);
+  await card.getByRole('button', { name: 'Gerar novo código para Turma rotativa' }).click();
+  await page.getByRole('button', { name: 'Gerar novo código', exact: true }).click();
+  await expect(card.locator('.class-code strong')).not.toHaveText(oldCode);
+  const newCode = await card.locator('.class-code strong').innerText();
+  await expect(page.getByText(`Novo código de Turma rotativa: ${newCode}`)).toBeAttached();
+
+  await switchPerspective(page, 'student');
+  await nav(page, 'Minhas turmas');
+  await page.getByRole('button', { name: 'Entrar em uma turma', exact: true }).click();
+  const input = page.getByLabel('Código da turma', { exact: true });
+  await input.fill(oldCode);
+  await page.getByRole('button', { name: 'Entrar na turma', exact: true }).click();
+  expect(await input.evaluate((el: HTMLInputElement) => el.validationMessage)).toMatch(
+    /^Código não encontrado/,
+  );
+  await input.fill(newCode);
+  await page.getByRole('button', { name: 'Entrar na turma', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Turma rotativa' })).toBeVisible();
+});

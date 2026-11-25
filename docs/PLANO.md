@@ -78,7 +78,7 @@ Itens adicionados na Entrega 4. Diagnóstico, fluxo e critérios em [ENTREGA-4.m
 | CC-22 | P0         | Judge confiável: endereço configurável, botão desabilitado sem judge, casos de teste no servidor com acesso conferido, checagem do bundle. **Concluído em 24/11** | CC-13        |
 | CC-23 | P1         | Submissões salvas, limite de frequência e "Aceito" como conclusão verificada no painel                                                                            | CC-22, CC-01 |
 | CC-24 | P0         | Ciclo da questão: rascunho, casos ocultos, validação com solução de referência, publicar, editar e arquivar. **Concluído em 24/11**                               | CC-22        |
-| CC-25 | P0         | Revisão do aluno com comentário, troca do código de convite e script de promoção de professor                                                                     | CC-19        |
+| CC-25 | P0         | Revisão do aluno com comentário, troca do código de convite e script de promoção de professor. **Concluído em 24/11**                                             | CC-19        |
 
 P0 é o MVP; P1 melhora a experiência quando o fluxo estiver estável; P2 não bloqueia a apresentação. Cada integrante assume uma entrega ou grupo coerente conforme disponibilidade, sem pressupor uma equipe específica.
 

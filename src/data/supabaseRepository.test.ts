@@ -246,6 +246,50 @@ describe('supabaseRepository', () => {
     });
   });
 
+  it('revisa conclusões e gera novo convite pelas RPCs do professor', async () => {
+    const rpc = vi
+      .fn<SupabaseRpcClient['rpc']>()
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: 'NOVO1234', error: null });
+    const repo = createSupabaseRepository({ rpc });
+
+    await repo.reviewProgress('problem-1', 'student-1', 'changes_requested', 'Teste o caso 0.');
+    await repo.reviewProgress('problem-1', 'student-1', 'clear');
+    await expect(repo.rotateInvite('class-1')).resolves.toBe('NOVO1234');
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'review_progress', {
+      pid: 'problem-1',
+      sid: 'student-1',
+      review_status: 'changes_requested',
+      review_comment: 'Teste o caso 0.',
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'review_progress', {
+      pid: 'problem-1',
+      sid: 'student-1',
+      review_status: 'clear',
+      review_comment: null,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(3, 'rotate_invite', { cid: 'class-1' });
+  });
+
+  it('converte a revisão da atividade e recusa situação desconhecida', async () => {
+    const review = { status: 'reviewed', reviewedAt: '2026-11-09T11:00:00.000Z' };
+    expect(parseActivityRowsPayload([{ ...activityPayload[0], review }])[0].review).toEqual(review);
+    expect(() =>
+      parseActivityRowsPayload([{ ...activityPayload[0], review: { ...review, status: 'ok' } }]),
+    ).toThrow('activity[0].review');
+    expect(() =>
+      parseActivityRowsPayload([{ ...activityPayload[0], review: { ...review, comment: 1 } }]),
+    ).toThrow('activity[0].review.comment');
+    const failing = createSupabaseRepository({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'invalid_review' } }),
+    });
+    await expect(
+      failing.reviewProgress('problem-1', 'student-1', 'changes_requested'),
+    ).rejects.toMatchObject({ code: 'invalid_review' });
+  });
+
   it('rejeita situação desconhecida e edição sem casos de teste', async () => {
     const badStatus = createSupabaseRepository({
       rpc: vi

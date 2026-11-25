@@ -4,6 +4,7 @@ import { STORAGE_KEY } from '../lib/domain';
 import type { DemoStateV1 } from '../lib/types';
 import { createDemoRepository, DEMO_USER_ID } from './demoRepository';
 import { createDemoStore, parseDemoState, type DemoStore } from './demoStore';
+import { FICTITIOUS_CLASS } from './fictitiousClass';
 import { RepositoryError, type ClassCodeRepository, type NewProblem } from './repository';
 
 const T0 = Date.parse('2026-11-02T15:00:00Z');
@@ -254,5 +255,62 @@ describe('repositório da demonstração', () => {
     const { id: _id, source: _source, ...base } = problems[0];
     await repo.saveProblem({ ...base, id: 'legado', authorClassId: 'demo-class', tests: [] });
     expect((await repo.getProblemForEdit('legado')).status).toBe('published');
+  });
+
+  it('revisão do professor: exige conclusão, pede ajuste com comentário e cai com nova evidência', async () => {
+    const review = () => store.getSnapshot().reviews?.sum;
+    await repo.startAttempt('sum');
+    expect(await rejection(repo.reviewProgress('sum', DEMO_USER_ID, 'reviewed'))).toBe(
+      'teacher_required',
+    );
+    store.update((s) => ({ ...s, role: 'teacher' }));
+    expect(await rejection(repo.reviewProgress('sum', DEMO_USER_ID, 'reviewed'))).toBe(
+      'report_required',
+    );
+    await repo.reportProgress('sum', 'Somei.');
+    // Students of the fictitious class are read-only.
+    expect(await rejection(repo.reviewProgress('sum', 'ficticio-1', 'reviewed'))).toBe(
+      'owner_required',
+    );
+    expect(
+      await rejection(repo.reviewProgress('sum', DEMO_USER_ID, 'changes_requested', '  ')),
+    ).toBe('invalid_review');
+    expect(
+      await rejection(repo.reviewProgress('sum', DEMO_USER_ID, 'reviewed', 'x'.repeat(1001))),
+    ).toBe('invalid_review');
+
+    now += 60_000;
+    await repo.reviewProgress('sum', DEMO_USER_ID, 'changes_requested', ' Teste o caso 0 0. ');
+    expect((await repo.myActivity())[0].review).toEqual({
+      status: 'changes_requested',
+      comment: 'Teste o caso 0 0.',
+      reviewedAt: new Date(T0 + 60_000).toISOString(),
+    });
+    // Sending the same evidence again keeps the review; new evidence needs a new look.
+    await repo.reportProgress('sum', 'Somei.');
+    expect(review()).toBeDefined();
+    await repo.reportProgress('sum', 'Somei e testei 0 0.');
+    expect(review()).toBeUndefined();
+
+    await repo.reviewProgress('sum', DEMO_USER_ID, 'reviewed');
+    expect(review()).toEqual({ status: 'reviewed', reviewedAt: T0 + 60_000 });
+    await repo.reviewProgress('sum', DEMO_USER_ID, 'clear');
+    expect(review()).toBeUndefined();
+    await repo.reviewProgress('sum', DEMO_USER_ID, 'reviewed');
+    await repo.reopenProblem('sum');
+    expect(review()).toBeUndefined();
+  });
+
+  it('gera um novo código de convite e o anterior deixa de valer', async () => {
+    store.update((s) => ({ ...s, role: 'teacher' }));
+    const { id, code } = await repo.createClassroom('Turma C', '2026.2');
+    expect(await rejection(repo.rotateInvite(FICTITIOUS_CLASS.id))).toBe('owner_required');
+    const next = await repo.rotateInvite(id);
+    expect(next).toMatch(/^[0-9A-F]{8}$/);
+    expect(next).not.toBe(code);
+    store.update((s) => ({ ...s, role: 'student' }));
+    expect(await rejection(repo.rotateInvite(id))).toBe('teacher_required');
+    expect(await rejection(repo.joinClassroom(code))).toBe('invalid_invite');
+    expect(await repo.joinClassroom(next)).toBe(id);
   });
 });

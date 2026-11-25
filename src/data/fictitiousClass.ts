@@ -5,7 +5,7 @@
  */
 import { FICTITIOUS_CLASS_ID } from '../lib/domain';
 import type { Classroom, HintOrdinal } from '../lib/types';
-import type { ActivityRow, ClassroomActivity } from './repository';
+import type { ActivityRow, ClassroomActivity, ReviewStatus } from './repository';
 
 export const FICTITIOUS_CLASS: Classroom = {
   id: FICTITIOUS_CLASS_ID,
@@ -28,7 +28,13 @@ interface Attempt {
   /** Minutes after the start. */
   hints: number[];
   done?: number;
+  /** The teacher's review, given 30 minutes after the report. */
+  review?: { status: ReviewStatus; comment?: string };
 }
+const withReview = (attempt: Attempt, review: Attempt['review']): Attempt => ({
+  ...attempt,
+  review,
+});
 const solved = (problem: string, start: number, hints = 0, minutes = 25): Attempt => ({
   problem,
   start,
@@ -51,7 +57,7 @@ const STUDENTS: { name: string; attempts: Attempt[] }[] = [
       solved('parity', 6 * DAY - HOUR, 0, 20),
       solved('maximum', 5 * DAY),
       solved('weird', 4 * DAY, 0, 35),
-      solved('missing', 2 * DAY, 1, 40),
+      withReview(solved('missing', 2 * DAY, 1, 40), { status: 'reviewed' }),
       open('distinct', 3 * HOUR, 3),
     ],
   },
@@ -74,7 +80,10 @@ const STUDENTS: { name: string; attempts: Attempt[] }[] = [
       solved('sum', 3 * DAY, 3, 45),
       solved('parity', 2 * DAY, 3, 50),
       solved('maximum', DAY, 2, 30),
-      solved('weird', 6 * HOUR, 3, 60),
+      withReview(solved('weird', 6 * HOUR, 3, 60), {
+        status: 'changes_requested',
+        comment: 'Explique por que a sequência sempre termina em 1 nos casos testados.',
+      }),
     ],
   },
   {
@@ -125,7 +134,12 @@ export function fictitiousActivity(now: number): ClassroomActivity {
         ...(a.done !== undefined && {
           reportedAt: ago(a.start - a.done),
           verification: 'self_reported' as const,
+          evidence: `Reflexão fictícia de ${s.name} sobre como resolveu o desafio.`,
         }),
+        ...(a.done !== undefined &&
+          a.review && {
+            review: { ...a.review, reviewedAt: ago(a.start - a.done - 30) },
+          }),
       })),
     ),
   };

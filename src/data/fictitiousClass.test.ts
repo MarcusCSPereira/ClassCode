@@ -45,6 +45,20 @@ describe('turma fictícia', () => {
     }
   });
 
+  it('traz evidência em toda conclusão e um exemplo de cada revisão do professor', () => {
+    const done = data.activity.filter((r) => r.reportedAt);
+    expect(done.every((r) => r.evidence?.includes('fictícia'))).toBe(true);
+    const reviews = done.filter((r) => r.review);
+    expect(reviews.map((r) => r.review!.status).sort()).toEqual(['changes_requested', 'reviewed']);
+    for (const r of reviews) {
+      expect(Date.parse(r.review!.reviewedAt)).toBeGreaterThan(Date.parse(r.reportedAt!));
+      expect(Date.parse(r.review!.reviewedAt)).toBeLessThanOrEqual(NOW);
+    }
+    expect(
+      reviews.find((r) => r.review!.status === 'changes_requested')!.review!.comment,
+    ).toBeTruthy();
+  });
+
   it('mostra cada sinal de atenção ao menos uma vez', () => {
     expect(signalsOf('Bruno S.')).toEqual(['Matriculado e ainda sem nenhum desafio aberto.']);
     expect(signalsOf('Camila R.')).toEqual(['Sem atividade há 10 dias.']);

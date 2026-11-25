@@ -18,7 +18,7 @@ import { remainingHintSeconds } from '../lib/domain';
 import { verdictLabel, type JudgeGateway, type SubmissionResult } from '../lib/judge';
 import type { HintOrdinal, Language } from '../lib/types';
 import type { Theme } from '../lib/useTheme';
-import type { ProblemSummary } from '../data/repository';
+import type { ProblemSummary, ProgressReview } from '../data/repository';
 const CodeEditor = lazy(() => import('../components/CodeEditor'));
 export type ProblemTab = 'statement' | 'hints';
 const fmt = (seconds: number) =>
@@ -41,6 +41,7 @@ export default function ProblemPage({
   onDraftChange,
   onRevealHint,
   onReport,
+  review,
   onBack,
   onOpenLab,
 }: {
@@ -61,6 +62,8 @@ export default function ProblemPage({
   /** Records the view on first call and resolves to the text; safe to repeat. */
   onRevealHint: (ordinal: HintOrdinal) => Promise<string>;
   onReport: () => void;
+  /** The teacher's review of this completion, shown to the student. */
+  review?: ProgressReview;
   onBack: () => void;
   onOpenLab: () => void;
 }) {
@@ -261,6 +264,26 @@ export default function ProblemPage({
                   : 'Valide com seu professor e registre seu progresso.'}
               </p>
             </div>
+            {solved && review && (
+              <div
+                className={`teacher-feedback ${review.status === 'changes_requested' ? 'needs-change' : ''}`}
+                role="note"
+                aria-label="Retorno do professor"
+              >
+                <strong>
+                  {review.status === 'reviewed'
+                    ? 'Seu professor revisou esta conclusão.'
+                    : 'Seu professor pediu um ajuste.'}
+                </strong>
+                {review.comment && <p>{review.comment}</p>}
+                {review.status === 'changes_requested' && (
+                  <p className="helper">
+                    Ajuste sua solução e atualize a evidência em “Conclusão declarada · ver
+                    registro”.
+                  </p>
+                )}
+              </div>
+            )}
             {submissionError && (
               <div className="judge-result judge-error" role="alert">
                 <strong>Erro na execução:</strong> {submissionError}

@@ -68,19 +68,27 @@ erDiagram
 | `get_problem_for_edit(pid)`                                     | Só o dono: questão completa com texto das dicas, casos ocultos, estado e nº de alunos que abriram  |
 | `set_problem_status(pid, new_status)`                           | Só o dono: `draft`, `published` ou `archived` (arquivar despublica e pode ser desfeito)            |
 | `judge_cases(pid, requester)`                                   | Só a chave de serviço (função do judge): casos de teste se o requisitante for dono ou matriculado  |
+| `review_progress(pid, sid, review_status, review_comment)`      | Só o dono da turma: `reviewed`, `changes_requested` (exige comentário) ou `clear`; exige conclusão |
+| `rotate_invite(cid)`                                            | Só o dono: gera um novo código de convite; o anterior deixa de valer e as matrículas continuam     |
 
 Ciclo da questão (Entrega 4, CC-24): `save_problem` cria o rascunho, `get_problem_for_edit` o reabre para edição e `set_problem_status` publica, arquiva ou restaura. Um trigger impede publicar sem as três dicas. `list_problems` devolve ao dono os rascunhos e as arquivadas (campo `status`) e aos alunos só as publicadas. `publish_problem` continua existindo para compatibilidade, mas a interface não o usa mais.
 
+Revisão do professor (Entrega 4, CC-25):
+
+- A tabela `public.progress_reviews` (uma linha por aluno e questão) guarda a revisão da conclusão autodeclarada, separada dela.
+- Um trigger apaga a revisão quando a evidência muda, e reabrir o desafio a apaga junto com a conclusão.
+- `my_activity` e `classroom_activity` devolvem o campo `review` (`status`, `comment`, `reviewedAt`): o aluno vê a própria, e o dono vê as da turma.
+- No cliente, o método do repositório é `reviewProgress(problemId, studentId, status, comment?)`. O `DemoRepository` aplica as mesmas regras, e a turma fictícia é somente leitura.
+
 ### Provisionamento de professor
 
-O navegador não recebe privilégio de alterar `profiles.role`. Inicialmente, um operador confiável promove o usuário no SQL Editor do ambiente de desenvolvimento, por UUID:
+O navegador não recebe privilégio de alterar `profiles.role`. Um operador confiável (dono do projeto) promove o usuário no SQL Editor com o script [`supabase/scripts/promote-teacher.sql`](../supabase/scripts/promote-teacher.sql):
 
-```sql
--- Substituir o UUID pelo usuário correto; executar somente como operador do banco.
-update public.profiles set role = 'teacher' where id = '<UUID_DO_USUARIO>';
-```
+1. A pessoa cria a conta pela tela de cadastro; contas nascem como estudante.
+2. O operador troca o e-mail no script e executa. O script devolve o perfil alterado, e nenhuma linha significa que o e-mail não tem conta.
+3. Para revogar, o operador executa o mesmo comando com `role = 'student'`. As turmas do professor continuam com ele, e transferi-las é uma decisão manual à parte.
 
-Isso é um procedimento de operação inicial, não um endpoint a expor no cliente. Em produção, definir autorização institucional para provisionamento e revogação de professores.
+Isso é um procedimento de operação, não um endpoint a expor no cliente. Em produção, definir autorização institucional para provisionamento e revogação de professores.
 
 ### O que falta no backend
 

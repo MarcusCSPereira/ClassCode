@@ -56,7 +56,7 @@ Passos 0–2 e 5–6 já existiam (falta homologar). Esta entrega cobre 3, 4, 7 
 | 1     | CC-22 | Endereço do judge configurável, botão desabilitado com explicação quando não há judge, casos de teste no banco lidos só pela função (dono ou aluno matriculado), executor e tratamento compartilhados entre servidor local e função, checagem de casos ocultos no bundle, `test-db.sh` no Windows | **Concluída em 24/11**                           |
 | 2     | CC-23 | Função exige limite de frequência; tabela de submissões; "Aceito" vira conclusão verificada no painel e no CSV                                                                                                                                                                                    | **Fora desta rodada** (precisa de Supabase real) |
 | 3     | CC-24 | Rascunho → validar com solução de referência → publicar; editar e arquivar; casos ocultos no editor                                                                                                                                                                                               | **Concluída em 24/11**                           |
-| 4     | CC-25 | Detalhe do aluno com evidência; revisar ou pedir ajuste com comentário visível ao aluno; trocar código de convite; script de promoção de professor                                                                                                                                                | Pendente                                         |
+| 4     | CC-25 | Detalhe do aluno com evidência; revisar ou pedir ajuste com comentário visível ao aluno; trocar código de convite; script de promoção de professor                                                                                                                                                | **Concluída em 24/11**                           |
 
 ### Critérios de aceite
 
@@ -73,6 +73,18 @@ Passos 0–2 e 5–6 já existiam (falta homologar). Esta entrega cobre 3, 4, 7 
   - **A turma de uma questão não muda** na edição (o servidor recusa).
   - **Na demo, o catálogo não é editável:** é a trilha de demonstração. No remoto, a trilha importada pertence à turma e é editável, inclusive os casos.
   - **`publish_problem` foi mantida** para compatibilidade; a interface usa `save_problem` + `set_problem_status`.
+- **Fatia 4:**
+  - **A revisão é um acompanhamento, não uma nota.** Ela fica numa tabela própria (`progress_reviews`), ligada à conclusão, e não muda a conclusão autodeclarada nem as métricas de conclusão. Por aluno, o painel conta "revisadas" e "com ajuste pedido"; o CSV ganhou essas duas colunas.
+  - **Dois estados:**
+    - "revisada": o comentário é opcional;
+    - "ajuste pedido": o comentário é obrigatório (até 1000 caracteres), porque o aluno precisa saber o que mudar.
+    - "Desfazer revisão" volta a conclusão para "sem revisão".
+  - **Evidência nova zera a revisão**, por trigger no banco e pela mesma regra na demo. Reenviar o mesmo texto mantém a revisão. Reabrir o desafio apaga a conclusão e a revisão.
+  - **O aluno vê o retorno na tela do desafio**, acima dos botões de envio, só enquanto a conclusão existir.
+  - **Onde o professor revisa:** o nome do aluno na tabela do acompanhamento abre o detalhe, com cada questão aberta, a evidência e as ações. Na turma fictícia, o detalhe é somente leitura e traz um exemplo de cada estado.
+  - **Trocar o convite** gera o código no servidor (32 caracteres no remoto, 8 na demo). O código antigo para de valer na hora, e quem já está matriculado continua na turma. A ação pede confirmação e não aparece na turma fictícia.
+  - **Promover professor não tem tela.** É um script de operador (`supabase/scripts/promote-teacher.sql`) rodado pelo dono do projeto, para que ninguém se promova pela aplicação.
+  - **Correção encontrada na revisão visual (existia desde antes):** no tema escuro, os campos de formulário tinham fundo branco com texto claro e ficavam ilegíveis. Agora usam `--surface-muted`.
 
 ## 6. Decisões pendentes do time
 

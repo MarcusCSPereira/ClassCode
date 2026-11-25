@@ -39,43 +39,70 @@ Copie o bloco abaixo para o topo da seção [Entradas](#entradas) e preencha.
 
 ## Entradas
 
-### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 4 / CC-25 (parcial)
+### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 4 / CC-25
 
-**Itens do backlog:** CC-25 (**parcial**: banco, repositório e métricas prontos; telas pendentes). A sessão parou pelo limite de uso.
+**Itens do backlog:** CC-25 (concluído). Com ele, as fatias 1, 3 e 4 da Entrega 4 estão prontas nesta branch; a fatia 2 (CC-23) depende do Supabase real.
 
 **Feito**
 
-- Migration `202611240003_teacher_review.sql`:
+- **Banco** (commit `06e1c2a`), migration `202611240003_teacher_review.sql`:
   - tabela `progress_reviews` ligada à conclusão: reabrir apaga a revisão, e mudar a evidência a zera (trigger);
   - RPC `review_progress(pid, sid, review_status, review_comment)`, só para o dono: `reviewed`, `changes_requested` (exige comentário) ou `clear`;
-  - RPC `rotate_invite(cid)`, só para o dono: o código antigo para de valer;
+  - RPC `rotate_invite(cid)`, só para o dono: o código antigo para de valer e as matrículas continuam;
   - `my_activity` e `classroom_activity` devolvem `review`.
-- `supabase/scripts/promote-teacher.sql`: script de operador para promover professor por e-mail.
-- Contrato: `ActivityRow.review`, `reviewProgress`, `rotateInvite` e os erros `report_required` / `invalid_review`, implementados no `DemoRepository` (turma fictícia somente leitura) e no `SupabaseRepository`. A atividade da demo passou a incluir a evidência.
-- Métricas: `reviewed` / `changesRequested` por aluno, revisão no mapa ("· revisada", "· ajuste pedido") e duas colunas novas no CSV.
+- **Script de operador** `supabase/scripts/promote-teacher.sql`: promove ou revoga professor por e-mail.
+- **Contrato:** `ActivityRow.review`, `reviewProgress`, `rotateInvite` e os erros `report_required` / `invalid_review`, nos dois repositórios. A atividade da demo inclui a evidência.
+- **Métricas:** `reviewed` / `changesRequested` por aluno, revisão no mapa ("· revisada", "· ajuste pedido") e duas colunas novas no CSV.
+- **Painel do professor:**
+  - o nome do aluno na tabela do acompanhamento ("Ver detalhes de …") abre `StudentDetailModal`, com cada questão aberta, a evidência, a revisão e as ações "Marcar como revisada", "Pedir ajuste" (comentário obrigatório) e "Desfazer revisão";
+  - depois de cada ação, o painel recarrega;
+  - na turma fictícia, o detalhe é somente leitura.
+- **Tela do desafio:** o aluno vê o "Retorno do professor" na área de envio: revisada, ou ajuste pedido com o comentário e a orientação para atualizar a evidência.
+- **Turmas:** "Gerar novo código" nas turmas do professor, com confirmação. A ação não aparece na turma fictícia.
+- **Turma fictícia:** toda conclusão tem evidência, e há um exemplo de cada revisão (Aline M.: revisada; Elisa T.: ajuste pedido com comentário).
+- **Correção do tema escuro** (o problema existia antes desta fatia): os campos de formulário tinham fundo branco com texto claro e ficavam ilegíveis. Agora usam `--surface-muted`.
+- **Docs:** ENTREGA-4 (fatia concluída e decisões), PLANO (CC-25 concluído), VALIDACAO, ARQUITETURA (RPCs, revisão e provisionamento pelo script), DESIGN e README.
 
 **Estado verificado**
 
-- `tsc` e 93 testes de unidade passaram.
-- `bash tests/test-db.sh` (PostgreSQL 18.1): passou, com as verificações de revisão e convite:
-  - não se revisa sem conclusão, e pedir ajuste exige comentário;
-  - o aluno lê o retorno;
-  - evidência nova zera a revisão, reabrir apaga e o professor pode desfazer;
-  - aluno e outro professor recebem negação;
-  - o código antigo falha e o novo funciona.
-- **Não executados nesta entrada:** E2E e checagem do bundle (as telas não mudaram).
+- `npm run check`: 99 testes de unidade, build e checagem do bundle passaram.
+- `npm run test:e2e`: 32 de 32, com três cenários novos em desktop e celular:
+  - ida e volta da revisão: pedir ajuste → o aluno vê → atualiza a evidência → o pedido some → o professor marca revisada → o aluno vê;
+  - detalhe somente leitura na turma fictícia;
+  - troca do convite: o código antigo é recusado e o novo entra.
+- `bash tests/test-db.sh` (PostgreSQL 18.1): passou.
+- Revisão visual do detalhe do aluno (desktop e celular escuros, celular claro, sem rolagem horizontal) e do retorno na tela do desafio.
+- Não verificado: Supabase real (migrations `202611240001` a `0003`, script de promoção, Edge Function) e Judge0 real.
 
-**Próximo passo esperado (falta para fechar CC-25)**
+**Decisões tomadas**
 
-1. **Detalhe do aluno no painel:** em `ClassMetrics`, o nome do aluno vira botão que abre um modal com cada questão, a evidência, a revisão e as ações "Marcar como revisada", "Pedir ajuste" (com comentário) e "Desfazer revisão". Depois de agir, recarregar com `retry`. Na turma fictícia, só leitura.
-2. **Tela do desafio:** mostrar ao aluno o retorno (`activityByProblem[id].review`) na área de envio.
-3. **Turmas:** botão "Gerar novo código" nas turmas do professor, com `ConfirmModal` e `repository.rotateInvite`.
-4. Opcional: evidências e revisões de exemplo na turma fictícia (`src/data/fictitiousClass.ts`).
-5. Testes de unidade dos métodos novos, E2E (pedir ajuste → aluno vê → reescreve → revisão zera; trocar convite), revisão visual, docs (ENTREGA-4, PLANO, VALIDACAO, ARQUITETURA) e commit "CC-25".
+Registradas em [ENTREGA-4.md](ENTREGA-4.md#decisões-tomadas-na-implementação). As principais:
+
+- a revisão é acompanhamento, não nota, e não muda a conclusão autodeclarada;
+- "ajuste pedido" exige comentário;
+- evidência nova zera a revisão;
+- trocar o convite não desmatricula ninguém;
+- promover professor é só por script de operador.
+
+**Ficou de fora / limites conhecidos**
+
+- O aluno não recebe notificação: ele vê o retorno ao abrir o desafio. Não há lista de "retornos pendentes".
+- A revisão não guarda histórico: só vale a última.
+- O detalhe do aluno mostra só as questões publicadas da turma acompanhada.
+
+**Próximo passo esperado**
+
+1. **Revisar e integrar** a branch `feat/entrega-4-professor` (fatias 1, 3 e 4) em `main` por PR. O push e o PR ficam com o time.
+2. **Com o projeto Supabase (decisão E1):**
+   - aplicar as migrations `202611240001`, `202611240002` e `202611240003` e o seed;
+   - publicar a Edge Function `judge-submit` com os segredos do Judge0 (nunca em `VITE_*`);
+   - promover um professor com `supabase/scripts/promote-teacher.sql`;
+   - repetir no modo remoto o fluxo completo: criar turma, importar a trilha, ciclo da questão, aluno entra e conclui, revisão com pedido de ajuste e troca do convite.
+3. **Fatia 2 (CC-23)**, depois do item 2: submissões salvas, limite de frequência e "Aceito" como conclusão verificada no painel e no CSV.
 
 **Bloqueios**
 
-- Nenhum para terminar a fatia. E1 (Supabase) continua aberta para homologar.
+- E1 (projeto Supabase), E2 (qual Judge0) e E3 (novo prazo) seguem com o time.
 
 ### 24/11/2026 · `feat/entrega-4-professor` · Franco Borba (com Claude Code) · Entrega 4, fatia 3 / CC-24
 
